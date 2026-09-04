@@ -19,7 +19,7 @@ import pandas as pd
 from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core.db import DISTRICT_NAME, SHRID_PREFIX, engine  # noqa: E402
+from core.db import DISTRICTS, district_names, engine  # noqa: E402
 
 R = "shrug/"
 
@@ -33,7 +33,10 @@ def target_shrids(raw: Path) -> set[str]:
         raw / R / "shrug-shrid-keys-csv" / "shrid_loc_names.csv",
         usecols=["shrid2", "district_name"], dtype=str,
     )
-    return set(nm.loc[nm["district_name"] == DISTRICT_NAME, "shrid2"])
+    keep = nm["district_name"].isin(district_names())
+    for d, n in nm.loc[keep, "district_name"].value_counts().sort_index().items():
+        log(f"  {d:<14} {n:>6,} places")
+    return set(nm.loc[keep, "shrid2"])
 
 
 def subset(path: Path, cols: list[str] | None, tgt: set[str]) -> pd.DataFrame:
@@ -57,14 +60,23 @@ def subset(path: Path, cols: list[str] | None, tgt: set[str]) -> pd.DataFrame:
     return df[df["shrid2"].isin(tgt)].copy()
 
 
+# PostgreSQL caps a statement at 65535 bind parameters. With method="multi"
+# pandas sends chunksize * n_columns parameters in one INSERT, so a fixed
+# chunk size silently works for a small table and fails once the table grows.
+# Derive it from the column count instead.
+PG_MAX_PARAMS = 65535
+
+
 def write(df: pd.DataFrame, table: str, eng, pk: str | list[str] | None = "shrid2"):
-    df.to_sql(table, eng, if_exists="replace", index=False, chunksize=5000,
+    chunk = max(1, PG_MAX_PARAMS // max(df.shape[1], 1) - 1)
+    df.to_sql(table, eng, if_exists="replace", index=False, chunksize=chunk,
               method="multi")
     with eng.begin() as c:
         if pk:
             cols = pk if isinstance(pk, str) else ", ".join(pk)
             c.execute(text(f'ALTER TABLE {table} ADD PRIMARY KEY ({cols})'))
-    log(f"{table:<22} {len(df):>7,} rows, {df.shape[1]:>3} cols")
+    log(f"{table:<22} {len(df):>7,} rows, {df.shape[1]:>3} cols "
+        f"(chunk {chunk:,})")
 
 
 def main() -> int:
@@ -74,8 +86,18 @@ def main() -> int:
     raw = Path(args.raw).resolve()
     eng = engine()
 
+    # Views and materialised views built by later ETL steps depend on these
+    # tables, so a re-load must drop them first. 30_build_indexes.py and
+    # 35_build_catchments.py recreate them.
+    with eng.begin() as c:
+        c.execute(text("DROP VIEW IF EXISTS village CASCADE"))
+        c.execute(text("DROP MATERIALIZED VIEW IF EXISTS catchment_population CASCADE"))
+        c.execute(text("DROP TABLE IF EXISTS village_neighbours CASCADE"))
+    log("dropped dependent views (rebuilt by steps 30 and 35)")
+
+    log(f"loading {len(DISTRICTS)} districts: {', '.join(district_names())}")
     tgt = target_shrids(raw)
-    log(f"district '{DISTRICT_NAME}' -> {len(tgt):,} shrids (prefix {SHRID_PREFIX})")
+    log(f"total -> {len(tgt):,} shrids")
 
     # ---- names: the spine for fuzzy resolution (M1) ----
     df = subset(raw / R / "shrug-shrid-keys-csv" / "shrid_loc_names.csv", None, tgt)

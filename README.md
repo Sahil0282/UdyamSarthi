@@ -4,7 +4,7 @@
 Nothing verifies *viability*. This computes the second one from real
 village-level data, for one district, and is able to say **no**.
 
-SIH 2026 · PS 26091 · Team Protocol 6 · Ahmadnagar (Ahilyanagar), Maharashtra
+SIH 2026 · PS 26091 · Team Protocol 6 · Maharashtra — 5 districts, 8,872 villages
 
 **Status: all phases 0–7 built.** 69 tests pass, 7 skip for a stated external
 reason. Every number in the output carries its source, year, geographic level
@@ -57,10 +57,19 @@ open http://localhost:8000/  # map + verdict + tappable provenance
 ```
 
 **No 8.8 GB download and no ETL run are needed to demo.** The repository ships
-`data/bundle/ahmadnagar.dump` (3.8 MB) — the entire Ahmadnagar district already
-loaded: 1,597 village polygons, the pre-computed 8 km catchment graph, census,
-Economic Census, Village Directory, SECC and night-lights tables. PostGIS
-restores it automatically on first start.
+`data/bundle/mh_5districts.dump` (22 MB) — five Maharashtra districts already
+loaded, with all 8,872 village polygons, the pre-computed 8 km catchment graph,
+census, Economic Census, Village Directory, SECC and night-lights tables.
+PostGIS restores it automatically on first start.
+
+| District | Places | Villages | Village Directory | SECC |
+|---|---|---|---|---|
+| Pune | 1,882 | 1,847 | 98.1% | 97.0% |
+| Nashik | 1,940 | 1,915 | 98.7% | 97.5% |
+| Thane | 1,727 | 1,676 | 97.0% | 95.1% |
+| Ahmadnagar (Ahilyanagar) | 1,597 | 1,578 | 98.8% | 97.8% |
+| Satara | 1,726 | — | 97.4% | 96.3% |
+| **Total** | **8,872** | | | |
 
 Verified from a fresh clone with Docker volumes destroyed: the containerised
 stack returns the *same* `run_id` and the same numbers as a local venv.
@@ -86,7 +95,7 @@ it changes rarely, and nobody needs it to run or review this project.
 
 | | In the repo | Why |
 |---|---|---|
-| `data/bundle/ahmadnagar.dump` | ✅ 3.8 MB | the loaded district — makes `docker compose up` work with zero downloads |
+| `data/bundle/mh_5districts.dump` | ✅ 22 MB | five loaded districts — makes `docker compose up` work with zero downloads |
 | `data/derived/plp_index/` | ✅ 780 KB | pre-built PLP index so citations work without re-embedding |
 | `data/raw/plp/ahilyanagar.pdf` | ✅ 7.2 MB | NABARD's district credit plan — a public document, and the source for every PLP citation |
 | `data/derived/RECON.md` | ✅ 1.5 MB | the Phase 0 audit trail; the source of truth for column names |
@@ -356,7 +365,7 @@ is why the system reports this verdict as low confidence rather than high.*
 8. **Voice depends on a hosted API.** No on-device fallback yet.
 9. **One district only.** Full-India is a scaling exercise, not a prototype
    requirement.
-10. **The system assesses the place and the plan, not the person.** Skill,
+11. **The system assesses the place and the plan, not the person.** Skill,
     health and family support are outside the boundary and we say so.
 
 ### The single highest-value next step
@@ -369,6 +378,32 @@ dairy verdict the system issues. That is a weekend's work with more impact than
 any code change in this repository.
 
 ---
+
+## Adding districts
+
+Every district in India is in the source data; the loaded set is a
+configuration choice, not a limit. Edit `DISTRICTS` in
+[`core/db.py`](core/db.py) — the `shrid2` prefix for any district can be read
+off `data/derived/RECON.md` or looked up in `shrid_loc_names.csv` — then:
+
+```bash
+python etl/10_load_shrug.py        # ~3 min for 5 districts
+python etl/20_load_polygons.py     # ~20 s
+python etl/30_build_indexes.py
+python etl/35_build_catchments.py  # ~3 min for 5 districts; the expensive step
+```
+
+Two design decisions matter when you do this:
+
+**Catchments cross district lines; percentile ranking does not.** An 8 km ring
+is geography — a village 3 km away is a real neighbour even if it sits in the
+next district, and truncating the ring at an administrative boundary would
+invent an edge that does not exist. Loading these five districts gave **1,602
+villages** a catchment that correctly crosses a district line. The saturation
+percentile stays inside the village's own district, because that is the
+comparison the Fact actually claims to make.
+
+**Mumbai is out of scope**, for the reason in the limitations above.
 
 ## Repository
 
@@ -385,7 +420,7 @@ tests/      unplug · determinism · provenance · refusal · milk-price provena
 data/
   rules/schemes/*.yaml   versioned scheme rules   (committed)
   sectors/*.yaml         unit-economics templates (committed)
-  bundle/*.dump          3.8 MB offline district   (committed)
+  bundle/*.dump          22 MB offline districts  (committed)
   derived/               RECON.md, column contract, PLP index
   raw/                   human-placed downloads   (gitignored)
 ```

@@ -21,10 +21,34 @@ from dotenv import load_dotenv
 # exported in the shell must not silently beat the one in the file.
 load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
 
-# Target district — discovered in Phase 0 recon, not assumed.
-# Every Ahmadnagar shrid2 starts with this, so the subset is a prefix scan.
-SHRID_PREFIX = "11-27-522-"
+# Target districts. Names and prefixes discovered in Phase 0 recon, not assumed:
+# every shrid2 in a district shares a prefix, so subsetting is a prefix scan and
+# needs no join.
+#
+# Catchments deliberately cross these boundaries. An 8 km ring is a geographic
+# fact, not an administrative one — a village 3 km away is a real neighbour even
+# if it sits in the next district. Percentile ranking, by contrast, stays inside
+# the village's OWN district, because that is the comparison the Fact claims to
+# make ("more crowded than X% of villages in this district").
+DISTRICTS: dict[str, str] = {
+    "ahmadnagar": "11-27-522-",
+    "pune":       "11-27-521-",
+    "nashik":     "11-27-516-",
+    "thane":      "11-27-517-",
+    "satara":     "11-27-527-",
+}
+
+# Kept for the single-district code paths and for backwards compatibility.
 DISTRICT_NAME = "ahmadnagar"
+SHRID_PREFIX = DISTRICTS[DISTRICT_NAME]
+
+
+def district_names() -> list[str]:
+    return sorted(DISTRICTS)
+
+
+def shrid_prefixes() -> list[str]:
+    return [DISTRICTS[d] for d in sorted(DISTRICTS)]
 
 # Buffer in a metric CRS. PART 10 forbids buffering in EPSG:4326 degrees.
 SRID_WGS84 = 4326

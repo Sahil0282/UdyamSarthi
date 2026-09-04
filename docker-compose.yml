@@ -2,8 +2,8 @@
 #
 #     docker compose up
 #
-# PostGIS restores the pre-built Ahmadnagar district bundle on first start
-# (data/bundle/ahmadnagar.dump, ~4 MB), so no 8.9 GB SHRUG download and no ETL
+# PostGIS restores the pre-built five-district bundle on first start
+# (data/bundle/mh_5districts.dump, ~22 MB), so no 8.9 GB SHRUG download and no ETL
 # run is needed to demo. MongoDB is hosted (MONGO_DB_URL) and optional — the
 # API falls back to an in-process provenance store and says so.
 services:

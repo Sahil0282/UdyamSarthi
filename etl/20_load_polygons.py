@@ -22,7 +22,8 @@ import geopandas as gpd
 from sqlalchemy import text
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from core.db import SHRID_PREFIX, SRID_METRIC, SRID_WGS84, engine  # noqa: E402
+from core.db import (SRID_METRIC, SRID_WGS84, district_names,  # noqa: E402
+                     engine, shrid_prefixes)
 
 
 def main() -> int:
@@ -34,9 +35,10 @@ def main() -> int:
 
     # Push the district filter into the driver — reads ~1,600 features out of
     # 595,438 without materialising the 615 MB file.
-    print(f"[geo] reading {shp.name} where shrid2 LIKE '{SHRID_PREFIX}%'",
-          flush=True)
-    g = gpd.read_file(shp, where=f"shrid2 LIKE '{SHRID_PREFIX}%'")
+    where = " OR ".join(f"shrid2 LIKE '{p}%'" for p in shrid_prefixes())
+    print(f"[geo] reading {shp.name} for {len(shrid_prefixes())} districts: "
+          f"{', '.join(district_names())}", flush=True)
+    g = gpd.read_file(shp, where=where)
     print(f"[geo] {len(g):,} polygons, crs={g.crs}", flush=True)
 
     invalid = int((~g.geometry.is_valid).sum())

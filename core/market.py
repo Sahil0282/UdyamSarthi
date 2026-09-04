@@ -45,15 +45,18 @@ def _district_table(shric: int, km: float, eng=None) -> pd.DataFrame:
     eng = eng or engine()
     return pd.read_sql(text("""
         SELECT cp.shrid2,
+               nm.district_name,
                cp.raw_pop,
                cp.decay_pop,
                cp.n_villages,
                COALESCE(SUM(s.emp), 0) AS sector_emp
           FROM catchment_population cp
+          JOIN shrid_names nm ON nm.shrid2 = cp.shrid2
           JOIN village_neighbours n ON n.shrid2 = cp.shrid2
           LEFT JOIN ec_village_sector s
                  ON s.shrid2 = n.neighbour AND s.shric = :shric
-         GROUP BY cp.shrid2, cp.raw_pop, cp.decay_pop, cp.n_villages
+         GROUP BY cp.shrid2, nm.district_name, cp.raw_pop, cp.decay_pop,
+                  cp.n_villages
     """), eng, params={"shric": shric})
 
 
@@ -135,13 +138,24 @@ def analyse(shrid: str, sector: dict, km: float = CATCHMENT_KM,
                  "the Economic Census has no per-sector establishment count.",
         )
 
-    # ---- 7. percentile rank against every village in the district ----
+    # ---- 7. percentile rank against every village in the SAME district ----
     #
     # Ranked on sector employment per 1,000 catchment people. Higher = more of
     # this sector per head nearby. What "high" MEANS depends on role, so the
     # note spells it out rather than assuming crowding.
-    dens = (tbl["sector_emp"] / tbl["decay_pop"].clip(lower=1)) * 1000.0
-    my_dens = float(dens[tbl["shrid2"] == shrid].iloc[0])
+    #
+    # The comparison set is the village's own district, even though the
+    # catchment itself crosses district lines. Those are different questions:
+    # the catchment asks "who is actually near me", which is geography; the
+    # percentile asks "how do I compare to my district", which is what the Fact
+    # claims. Ranking a Pune village against Satara ones would quietly change
+    # the claim being made.
+    my_district = str(tbl.loc[tbl["shrid2"] == shrid, "district_name"].iloc[0])
+    peers = tbl[tbl["district_name"] == my_district]
+    dens = (peers["sector_emp"] / peers["decay_pop"].clip(lower=1)) * 1000.0
+    my_dens = float(
+        (tbl.loc[tbl["shrid2"] == shrid, "sector_emp"].iloc[0]
+         / max(tbl.loc[tbl["shrid2"] == shrid, "decay_pop"].iloc[0], 1)) * 1000.0)
     pct = float((dens < my_dens).mean() * 100.0)
     reading = ("Higher percentile = MORE buyer capacity nearby, which is "
                "favourable for this sector."
@@ -155,13 +169,15 @@ def analyse(shrid: str, sector: dict, km: float = CATCHMENT_KM,
     out["saturation_percentile"] = Fact(
         round(pct, 1), "percentile", EC_SOURCE, 2013, "village", "medium",
         note=f"Rank of this village's catchment '{sector_label}' employment per "
-             f"1,000 people against all {len(tbl):,} villages in the district. "
-             f"{reading} {EC_NOTE}",
+             f"1,000 people against all {len(peers):,} villages in "
+             f"{my_district} district. {reading} The 8 km catchment itself "
+             f"crosses district boundaries; this comparison does not. {EC_NOTE}",
     )
     out["district_median_density"] = Fact(
         round(float(dens.median()), 3), "employed per 1,000 catchment persons",
         EC_SOURCE, 2013, "district", "medium",
-        note="District-wide median for comparison; district-level by definition.",
+        note=f"Median across {len(peers):,} villages in {my_district} district, "
+             "for comparison; district-level by definition.",
     )
 
     # ---- 8. growth signal: night-lights trend ----
