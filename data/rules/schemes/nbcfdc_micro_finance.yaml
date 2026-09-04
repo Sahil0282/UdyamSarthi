@@ -1,0 +1,18 @@
+scheme_id: NBCFDC_MICRO_FINANCE
+corporation: NBCFDC
+scheme_name: "Micro Finance Scheme"
+target_group: OBC
+effective_from: 2024-04-01
+source_url: "https://nbcfdc.gov.in"
+verified: false
+income_ceiling_inr: 300000
+loan_to_cost_ratio: 0.90
+per_beneficiary_cap_inr: 125000
+interest_slabs:
+  - { upto_inr: 125000, annual_rate: 0.06 }
+repayment_years: 3
+moratorium_months: 3
+installment_frequency: monthly
+state_overrides:
+  MH: {}
+notes: "Micro Finance tier — smaller cap, shorter tenure than Term Loan. Approximate figures, not re-verified live."

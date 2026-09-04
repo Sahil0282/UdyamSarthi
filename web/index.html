@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Udyam Saarthi</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{--bg:#faf9f7;--fg:#1a1a18;--mut:#6b6a66;--line:#e2e0db;--card:#fff;
+        --ok:#1f7a4d;--warn:#a8620a;--bad:#a52a2a;--acc:#2b5f8f}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--fg)}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);
+         display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+  h1{font-size:17px;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--mut);font-size:12px}
+  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:0;height:calc(100vh - 53px)}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr;height:auto}#map{height:52vh}}
+  #map{width:100%;height:100%}
+  .panel{overflow-y:auto;border-left:1px solid var(--line);background:var(--card);padding:16px}
+  .form{display:grid;gap:8px;margin-bottom:14px}
+  .form label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+  input,select,button{font:inherit;padding:7px 9px;border:1px solid var(--line);
+                      border-radius:6px;background:#fff;color:var(--fg)}
+  button{cursor:pointer;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+  button.ghost{background:#fff;color:var(--acc)}
+  button:disabled{opacity:.5;cursor:default}
+  .verdict{border:1px solid var(--line);border-radius:9px;padding:13px;margin-bottom:13px}
+  .verdict.PROCEED{border-left:4px solid var(--ok)}
+  .verdict.PROCEED_WITH_CHANGES{border-left:4px solid var(--warn)}
+  .verdict.RECONSIDER{border-left:4px solid var(--bad)}
+  .vtitle{font-size:16px;font-weight:700;letter-spacing:-.01em}
+  .vtitle.PROCEED{color:var(--ok)}.vtitle.PROCEED_WITH_CHANGES{color:var(--warn)}
+  .vtitle.RECONSIDER{color:var(--bad)}
+  .chip{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:99px;
+        border:1px solid var(--line);color:var(--mut);margin-right:5px}
+  .chip.low{background:#fdf3e7;border-color:#e9c99a;color:#8a5008}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);
+     margin:16px 0 7px;font-weight:600}
+  table{width:100%;border-collapse:collapse}
+  td{padding:5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  td.k{color:var(--mut);font-size:12.5px}
+  td.v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
+       max-width:230px}
+  .num{cursor:pointer;border-bottom:1px dotted var(--acc);color:var(--acc);font-weight:600}
+  .num:hover{background:#eef4fa}
+  /* lives inside a nowrap cell, so it must reset wrapping and alignment itself */
+  .prov{background:#f4f2ee;border:1px solid var(--line);border-radius:7px;padding:10px;
+        margin:7px 0;font-size:12px;white-space:normal;text-align:left;
+        max-width:100%;overflow-wrap:anywhere}
+  .prov b{display:block;margin-bottom:3px}
+  .prov .meta{color:var(--mut);margin:3px 0}
+  .flag{padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+  .sev{font-size:10px;font-weight:700;text-transform:uppercase;margin-right:6px}
+  .sev.high{color:var(--bad)}.sev.medium{color:var(--warn)}.sev.low{color:var(--mut)}
+  .alt{border:1px solid var(--line);border-radius:7px;padding:9px;margin-bottom:7px}
+  .prose{background:#f4f2ee;border-radius:7px;padding:11px;font-size:13px;line-height:1.6}
+  .err{color:var(--bad)}
+  .voicebar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+  .voicebar button{flex:0 0 auto}
+  button.rec{background:var(--bad);border-color:var(--bad)}
+  .heard{background:#eef4fa;border:1px solid #c9dced;border-radius:7px;padding:8px;
+         font-size:12.5px;margin-bottom:10px}
+  .heard b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+           color:var(--mut);margin-bottom:3px}
+  ul{margin:5px 0;padding-left:17px}li{margin:3px 0;font-size:12.5px}
+  .legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.94);
+          border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11.5px}
+  .legend div{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const e = React.createElement;
+const API = location.origin;
+const fmt = v => v === null || v === undefined ? "n/a"
+  : (typeof v === "number" ? v.toLocaleString("en-IN", {maximumFractionDigits:2}) : String(v));
+
+/* ---------- a tappable number: every one shows its provenance ---------- */
+function Num({fact, prefix}) {
+  const [open, setOpen] = React.useState(false);
+  if (!fact || typeof fact !== "object") return e("span", null, fmt(fact));
+  return e(React.Fragment, null,
+    e("span", {className:"num", onClick:()=>setOpen(!open),
+               title:"Tap to see source"},
+      (prefix||"") + fmt(fact.value)),
+    open && e("div", {className:"prov"},
+      e("b", null, fact.source || "no source"),
+      e("div", {className:"meta"},
+        `year ${fact.year ?? "n/a"} · ${fact.geo_level} level · confidence ${fact.confidence}`
+        + (fact.unit ? ` · ${fact.unit}` : "")),
+      fact.note && e("div", null, fact.note)));
+}
+
+function Row({label, fact, prefix}) {
+  return e("tr", null,
+    e("td", {className:"k"}, label),
+    e("td", {className:"v"}, e(Num, {fact, prefix})));
+}
+
+/* ---------------------------- the map ---------------------------- */
+function CatchmentMap({env}) {
+  const ref = React.useRef(null), mapRef = React.useRef(null);
+  React.useEffect(() => {
+    if (mapRef.current) return;
+    mapRef.current = new maplibregl.Map({
+      container: ref.current,
+      style: {
+        version: 8,
+        sources: {osm: {type:"raster",
+          tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+          tileSize:256, attribution:"© OpenStreetMap"}},
+        layers: [{id:"osm", type:"raster", source:"osm"}]
+      },
+      center:[74.38,19.58], zoom:9});
+    mapRef.current.addControl(new maplibregl.NavigationControl());
+    window.__map = mapRef.current;   // exposed for the UI checks
+  }, []);
+
+  React.useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !env || !env.geo) return;
+    const draw = () => {
+      ["ring-f","ring-l","vil-f","vil-l","pts","pts-lbl"].forEach(id=>{
+        if (map.getLayer(id)) map.removeLayer(id);});
+      ["ring","vil","pts"].forEach(id=>{ if (map.getSource(id)) map.removeSource(id);});
+
+      const ring = JSON.parse(env.geo.ring_geojson);
+      const vil  = JSON.parse(env.geo.village_geojson);
+      map.addSource("ring",{type:"geojson",data:{type:"Feature",geometry:ring}});
+      map.addLayer({id:"ring-f",type:"fill",source:"ring",
+        paint:{"fill-color":"#2b5f8f","fill-opacity":0.08}});
+      map.addLayer({id:"ring-l",type:"line",source:"ring",
+        paint:{"line-color":"#2b5f8f","line-width":2,"line-dasharray":[3,2]}});
+
+      map.addSource("vil",{type:"geojson",data:{type:"Feature",geometry:vil}});
+      map.addLayer({id:"vil-f",type:"fill",source:"vil",
+        paint:{"fill-color":"#1f7a4d","fill-opacity":0.28}});
+      map.addLayer({id:"vil-l",type:"line",source:"vil",
+        paint:{"line-color":"#1f7a4d","line-width":2.5}});
+
+      const pts = (env.geo.points||[]).map(p=>({type:"Feature",
+        geometry:{type:"Point",coordinates:[p.lon,p.lat]},
+        properties:{name:p.place_name, emp:p.employment, d:p.dist_km}}));
+      map.addSource("pts",{type:"geojson",data:{type:"FeatureCollection",features:pts}});
+      const buyer = env.geo.points_role === "procurement_capacity";
+      map.addLayer({id:"pts",type:"circle",source:"pts",
+        paint:{"circle-radius":["interpolate",["linear"],["get","emp"],0,5,300,18],
+               "circle-color": buyer ? "#a8620a" : "#a52a2a",
+               "circle-opacity":0.82,"circle-stroke-width":1.5,
+               "circle-stroke-color":"#fff"}});
+
+      map.on("click","pts",ev=>{
+        const p = ev.features[0].properties;
+        new maplibregl.Popup().setLngLat(ev.lngLat)
+          .setHTML(`<b>${p.name}</b><br>${p.emp} employed<br>${p.d} km away`)
+          .addTo(map);});
+      map.on("mouseenter","pts",()=>map.getCanvas().style.cursor="pointer");
+      map.on("mouseleave","pts",()=>map.getCanvas().style.cursor="");
+
+      const c = ring.coordinates[0];
+      const b = c.reduce((a,x)=>[[Math.min(a[0][0],x[0]),Math.min(a[0][1],x[1])],
+                                 [Math.max(a[1][0],x[0]),Math.max(a[1][1],x[1])]],
+                         [[180,90],[-180,-90]]);
+      map.fitBounds(b,{padding:44,duration:600});
+    };
+    map.isStyleLoaded() ? draw() : map.once("load", draw);
+  }, [env]);
+
+  const buyer = env && env.geo && env.geo.points_role === "procurement_capacity";
+  return e("div",{style:{position:"relative",height:"100%"}},
+    e("div",{id:"map",ref}),
+    env && env.geo && e("div",{className:"legend"},
+      e("div",null,e("span",{className:"sw",style:{background:"#1f7a4d",opacity:.6}}),"your village"),
+      e("div",null,e("span",{className:"sw",style:{background:"#2b5f8f",opacity:.3}}),
+        `${env.geo.catchment_km} km catchment`),
+      e("div",null,e("span",{className:"sw",style:{background:buyer?"#a8620a":"#a52a2a",
+        borderRadius:"99px"}}), buyer ? "buyers (milk plants)" : "competitors")));
+}
+
+/* ---------------------------- the app ---------------------------- */
+function App() {
+  const [village,setVillage] = React.useState("nimgaon jali");
+  const [capital,setCapital] = React.useState(100000);
+  const [sector,setSector]   = React.useState("dairy_buffalo");
+  const [sectors,setSectors] = React.useState([]);
+  const [lang,setLang]       = React.useState("en");
+  const [override,setOverride] = React.useState(false);
+  const [env,setEnv]   = React.useState(null);
+  const [rec,setRec]     = React.useState(false);
+  const [heard,setHeard] = React.useState(null);
+  const [voiceErr,setVoiceErr] = React.useState(null);
+  const [speaking,setSpeaking] = React.useState(false);
+  const recRef = React.useRef(null);
+  const [busy,setBusy] = React.useState(false);
+  const [err,setErr]   = React.useState(null);
+  const [cands,setCands] = React.useState(null);
+
+  React.useEffect(()=>{fetch(API+"/sectors").then(r=>r.json())
+    .then(d=>setSectors(d.sectors)).catch(()=>{});},[]);
+
+  const run = async (opts={}) => {
+    setBusy(true); setErr(null); setCands(null);
+    try {
+      const body = {village, capital_inr:Number(capital), sector,
+                    lang, override:opts.override ?? override,
+                    shrid: opts.shrid ?? null, use_llm:false};
+      const r = await fetch(API+"/advise",{method:"POST",
+        headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || "request failed");
+      if (d.resolution && d.resolution.needs_confirmation) {
+        setCands(d.resolution); setEnv(null);
+      } else { setEnv(d); }
+    } catch(ex){ setErr(String(ex.message||ex)); }
+    setBusy(false);
+  };
+  React.useEffect(()=>{run();},[]);   // eslint-disable-line
+
+  /* ---- voice: additive. Any failure leaves the text form working ---- */
+  const startRec = async () => {
+    setVoiceErr(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      const mr = new MediaRecorder(stream);
+      const chunks = [];
+      mr.ondataavailable = ev => chunks.push(ev.data);
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t=>t.stop());
+        const blob = new Blob(chunks,{type:mr.mimeType||"audio/webm"});
+        const fd = new FormData();
+        fd.append("audio", blob, "q.webm");
+        fd.append("lang", lang);
+        try {
+          const r = await fetch(API+"/voice/transcribe",{method:"POST",body:fd});
+          const d = await r.json();
+          if (!d.ok) { setVoiceErr(d.error||"transcription failed"); return; }
+          setHeard(d);
+          // Fill the form but DO NOT run — the user confirms first.
+          if (d.parsed.village) setVillage(d.parsed.village);
+          if (d.parsed.capital_inr) setCapital(d.parsed.capital_inr);
+          if (d.parsed.sector) setSector(d.parsed.sector);
+        } catch(ex){ setVoiceErr(String(ex.message||ex)); }
+      };
+      recRef.current = mr; mr.start(); setRec(true);
+    } catch(ex){
+      setVoiceErr("Microphone unavailable — use the text form. ("+
+                  (ex.message||ex)+")");
+    }
+  };
+  const stopRec = () => { if (recRef.current) recRef.current.stop();
+                          setRec(false); };
+
+  const speak = async () => {
+    if (!env || !env.narration) return;
+    setSpeaking(true); setVoiceErr(null);
+    try {
+      const r = await fetch(API+"/voice/speak",{method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({text:env.narration.text})});
+      if (!r.ok) throw new Error("TTS unavailable");
+      const buf = await r.arrayBuffer();
+      const url = URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
+      await new Audio(url).play();
+    } catch(ex){ setVoiceErr("Could not play audio — the text above is the "+
+                             "same advice. ("+(ex.message||ex)+")"); }
+    setSpeaking(false);
+  };
+
+  const d = env && env.decision, m = env && env.market,
+        f = env && env.finance,  a = env && env.affordability;
+
+  return e(React.Fragment,null,
+    e("header",null,
+      e("h1",null,"उद्यम सारथी · Udyam Saarthi"),
+      e("span",{className:"sub"},
+        "Viability, not eligibility · Ahmadnagar, Maharashtra"),
+      env && e("span",{className:"sub"},"run ",env.run_id)),
+    e("div",{className:"wrap"},
+      e(CatchmentMap,{env}),
+      e("div",{className:"panel"},
+        e("div",{className:"voicebar"},
+          e("button",{className:rec?"rec":"ghost",
+                      onClick:rec?stopRec:startRec},
+            rec?"◼ Stop":"🎙 Speak"),
+          env && env.narration && e("button",{className:"ghost",onClick:speak,
+                                              disabled:speaking},
+            speaking?"…":"🔊 Listen")),
+        voiceErr && e("div",{className:"err",style:{fontSize:12,marginBottom:8}},
+          voiceErr),
+        heard && e("div",{className:"heard"},
+          e("b",null,"Heard — confirm before running"),
+          e("div",null,heard.transcript),
+          e("div",{className:"sub",style:{marginTop:4}},
+            "→ ",heard.parsed.village||"?"," · ₹",
+            fmt(heard.parsed.capital_inr)," · ",heard.parsed.sector||"?")),
+        e("div",{className:"form"},
+          e("label",null,"Village"),
+          e("input",{value:village,onChange:ev=>setVillage(ev.target.value)}),
+          e("label",null,"Your capital (₹)"),
+          e("input",{type:"number",value:capital,onChange:ev=>setCapital(ev.target.value)}),
+          e("label",null,"Sector"),
+          e("select",{value:sector,onChange:ev=>setSector(ev.target.value)},
+            sectors.map(s=>e("option",{key:s.sector_id,value:s.sector_id},
+              s.display_name.en))),
+          e("label",null,"Language"),
+          e("select",{value:lang,onChange:ev=>setLang(ev.target.value)},
+            e("option",{value:"en"},"English"),
+            e("option",{value:"mr"},"मराठी")),
+          e("button",{onClick:()=>run(),disabled:busy},
+            busy?"Computing…":"Get advice")),
+
+        err && e("div",{className:"err"},err),
+
+        cands && e("div",null,
+          e("h2",null,"Which one?"),
+          e("div",{style:{fontSize:12.5,marginBottom:8}},cands.message),
+          cands.candidates.slice(0,8).map(c=>
+            e("div",{className:"alt",key:c.shrid2},
+              e("b",null,c.place_name),
+              e("div",{className:"sub"},
+                `${c.subdistrict_name} · pop ${fmt(c.population)} · score ${c.score}`),
+              e("button",{className:"ghost",style:{marginTop:6},
+                onClick:()=>run({shrid:c.shrid2})},"Use this one")))),
+
+        env && e(React.Fragment,null,
+          e("div",{className:"verdict "+d.verdict},
+            e("div",{className:"vtitle "+d.verdict}, d.verdict.replace(/_/g," ")),
+            e("div",{style:{margin:"7px 0"}},
+              e("span",{className:"chip"},"score ",fmt(d.score.overall.value)),
+              e("span",{className:"chip "+d.confidence},"confidence ",d.confidence)),
+            d.override_applied && e("div",{className:"sub"},
+              "Override applied — verdict unchanged, showing risk mitigation."),
+            e("div",{className:"prose",style:{marginTop:8}},
+              env.narration && env.narration.text)),
+
+          e("h2",null,"Market"),
+          e("table",null,e("tbody",null,
+            e(Row,{label:`Catchment population (${env.geo.catchment_km} km)`,
+                   fact:m.catchment_population}),
+            e(Row,{label:"Villages in catchment",fact:m.villages_in_catchment}),
+            m.procurement_capacity && e(Row,{label:"Buyer capacity (people employed)",
+                   fact:m.procurement_capacity}),
+            e(Row,{label:"Percentile vs district",fact:m.saturation_percentile}),
+            e(Row,{label:"Night-lights trend",fact:m.growth_signal}))),
+
+          e("h2",null,"Financial roadmap"),
+          e("table",null,e("tbody",null,
+            e(Row,{label:"Eligible loan",fact:f.eligible_loan,prefix:"₹"}),
+            e(Row,{label:"Interest rate",fact:f.interest_rate}),
+            e(Row,{label:"EMI at eligible",fact:f.emi,prefix:"₹"}),
+            e(Row,{label:"Monthly revenue",fact:a.monthly_revenue,prefix:"₹"}),
+            e(Row,{label:"Monthly running cost",fact:a.monthly_opex,prefix:"₹"}),
+            e(Row,{label:"Household needs",fact:a.household_drawings,prefix:"₹"}),
+            e(Row,{label:"Left for EMI",fact:a.net_available_for_emi,prefix:"₹"}),
+            e(Row,{label:"RECOMMENDED loan",fact:a.recommended_loan,prefix:"₹"}),
+            e(Row,{label:"EMI at recommended",fact:a.emi_at_recommended,prefix:"₹"}),
+            e(Row,{label:"Working-capital floor",fact:a.working_capital_floor,prefix:"₹"}),
+            a.milk_price && e(Row,{label:"Milk price used",fact:a.milk_price,prefix:"₹"}),
+            a.yield_per_animal_per_day && e(Row,{label:"Yield assumed",
+                   fact:a.yield_per_animal_per_day}))),
+
+          e("h2",null,"Stress test"),
+          e("table",null,e("tbody",null,
+            e(Row,{label:"Survival at recommended",
+                   fact:env.risk.survival_at_recommended}),
+            e(Row,{label:"Survival at eligible",
+                   fact:env.risk.survival_at_eligible}))),
+
+          env.risk.flags.length>0 && e(React.Fragment,null,
+            e("h2",null,"Risks found"),
+            env.risk.flags.map((fl,i)=>e("div",{className:"flag",key:i},
+              e("span",{className:"sev "+fl.severity},fl.severity),
+              fl.message,
+              fl.evidence && e("div",{style:{marginTop:4}},
+                e(Num,{fact:fl.evidence}))))),
+
+          e("h2",null,"Why"),
+          e("ul",null,d.reasons.slice(0,6).map((r,i)=>e("li",{key:i},r))),
+
+          d.alternatives.length>0 && e(React.Fragment,null,
+            e("h2",null,"Better options for this village"),
+            d.alternatives.map((alt,i)=>e("div",{className:"alt",key:i},
+              e("b",null,alt.display_name),
+              e("div",null,e(Num,{fact:alt.score})," score · recommended ",
+                e(Num,{fact:alt.recommended_loan,prefix:"₹"})),
+              e("div",{className:"sub"},alt.why)))),
+
+          d.mitigations && e(React.Fragment,null,
+            e("h2",null,"Risk mitigation"),
+            e("ul",null,d.mitigations.map((x,i)=>e("li",{key:i},x)))),
+
+          d.verdict!=="PROCEED" && !d.override_applied &&
+            e("button",{className:"ghost",style:{marginTop:12,width:"100%"},
+              onClick:()=>{setOverride(true);run({override:true});}},
+              "I still want to do this →"),
+
+          e("h2",null,"Provenance"),
+          e("div",{className:"sub"},
+            env.provenance.length," facts · every number above is tappable · ",
+            e("a",{href:API+"/provenance/"+env.run_id,target:"_blank"},"raw JSON"))))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>

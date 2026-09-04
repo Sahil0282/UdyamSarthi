@@ -1,0 +1,7 @@
+{
+ "source_pdf": "data/raw/plp/ahilyanagar.pdf",
+ "document": "NABARD Potential Linked Credit Plan, Ahilyanagar 2025-26",
+ "model": "sentence-transformers/all-MiniLM-L6-v2",
+ "dims": 384,
+ "chunks": 184
+}

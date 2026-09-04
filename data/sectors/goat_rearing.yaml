@@ -1,0 +1,81 @@
+# Goat rearing — NABARD 10+1 unit (10 does + 1 buck).
+sector_id: goat_rearing
+display_name: { en: "Goat rearing", mr: "शेळीपालन" }
+unit: "animal"
+
+# Live goats are NOT in the Economic Census (NIC division 01 is absent — see
+# RECON.md s0). The nearest observable activity is meat processing, which is
+# the BUYER, so the sign is positive exactly as for dairy.
+market_mapping:
+  shric_bucket: 5
+  shric_desc: "Processing of meat"
+  ec_column: "ec13_emp_shric_5"
+  measure: "employment"
+  nic_codes: { nic08_3d: ["101"], nic04: ["1511"], nic87: ["200"] }
+  role: procurement_capacity
+  sign: positive
+  competitor_count:
+    available: false
+    reason: >-
+      Goat rearing (NIC-2008 0144) is outside the Economic Census frame.
+      Competing rearers in the catchment are not measurable; SHRIC 5 counts
+      meat processors, who are buyers.
+  source: "SHRUG v2.2 shric_descriptions.csv + shric_NIC08_3d_key.csv"
+  verified: true
+
+capex:
+  nabard_unit: "10+1"
+  unit_cost_inr: 124863
+  source: "NABARD PLP Ahilyanagar 2025-26, Annexure 4 row 47 — 'Goat Rearing Unit 10+1'"
+  source_file: "data/raw/plp/ahilyanagar.pdf"
+  year: 2024
+  geo_level: district
+  verified: true
+  bank_loan_factor: 0.85
+
+monthly:
+  revenue_model: fixed_margin
+  units_per_unit: 11
+  gross_revenue_inr_per_month:
+    value: 9000
+    source: "Sector benchmark — NOT primary data, NOT PLP-sourced"
+    year: null
+    geo_level: national
+    confidence: low
+    note: >-
+      Illustrative gross monthly revenue for an 11-animal goat unit, from
+      general sector benchmarks rather than a published NABARD model profile
+      or a local survey. Replace before any figure derived from it is
+      presented as advice.
+  opex_per_unit_inr: { feed: 250, vet: 60, transport: 40 }
+  opex_source: "Sector benchmark — NOT primary data"
+  opex_confidence: low
+  opex_verified: false
+
+working_capital_months: 3
+seasonality:
+  source: none
+  reason: >-
+    Live goats are not mandi-traded on the data.gov.in resource, and that
+    resource holds one day of records regardless. No seasonal index computable.
+  window_months: 0
+  confidence: none
+
+risk_flags:
+  requires_daily_collection: false
+  requires_all_weather_road: false
+  road_column: "pc11_vd_rd_all_wthr"
+  requires_veterinary_access: true
+  vet_column: "pc11_vd_vet_hosp"
+  fodder_land_columns: ["pc11_vd_land_pst_grz"]
+  market_access_columns: ["pc11_vd_mrkt", "pc11_vd_wkl_haat"]
+
+# Retrieval query for the district PLP (Phase 7 RAG). Explicit because the
+# display name alone ("Dairy (buffalo)") does not match how the PLP titles its
+# sections ("2.1.6 Animal Husbandry - Dairy").
+# Transcribed from the PLP table of contents — 2.1.8 Animal Husbandry - Sheep, Goat, Piggery, PLP p.63. Retrieval prefers
+# these sections exactly; the semantic query below is only a fallback.
+plp_sections: ["2.1.8"]
+plp_query: "Animal Husbandry Sheep Goat Piggery rearing unit district status"
+
+assumptions_source: "NABARD PLP Ahilyanagar 2025-26 (capex only); revenue and opex are unsourced benchmarks"

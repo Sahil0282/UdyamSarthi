@@ -1,0 +1,78 @@
+# Backyard / small broiler unit — 100 birds.
+sector_id: backyard_poultry
+display_name: { en: "Backyard poultry (broiler)", mr: "परसातील कुक्कुटपालन" }
+unit: "bird"
+
+market_mapping:
+  shric_bucket: 5
+  shric_desc: "Processing of meat"
+  ec_column: "ec13_emp_shric_5"
+  measure: "employment"
+  nic_codes: { nic08_3d: ["101"], nic04: ["1511"], nic87: ["200"] }
+  role: procurement_capacity
+  sign: positive
+  competitor_count:
+    available: false
+    reason: >-
+      Poultry raising (NIC-2008 0146) is outside the Economic Census frame.
+      SHRIC 5 counts meat processors, who are buyers, not competitors.
+  source: "SHRUG v2.2 shric_descriptions.csv + shric_NIC08_3d_key.csv"
+  verified: true
+
+capex:
+  nabard_unit: "100 birds"
+  unit_cost_inr: 32000
+  source: "NABARD PLP Ahilyanagar 2025-26, Annexure 4 — 'Broiler Farming, Others, 100'"
+  source_file: "data/raw/plp/ahilyanagar.pdf"
+  year: 2024
+  geo_level: district
+  verified: true
+  bank_loan_factor: 0.85
+
+monthly:
+  revenue_model: fixed_margin
+  units_per_unit: 100
+  gross_revenue_inr_per_month:
+    value: 6000
+    source: "Sector benchmark — NOT primary data, NOT PLP-sourced"
+    year: null
+    geo_level: national
+    confidence: low
+    note: >-
+      Illustrative gross monthly revenue for a 100-bird broiler cycle,
+      annualised across batches. General benchmark, not a NABARD model profile
+      and not locally surveyed. The PLP itself warns that feed (maize, soya) is
+      market-priced and a price spike hits this sector hard.
+  opex_per_unit_inr: { feed: 38, chicks: 12, vet_medicine: 3 }
+  opex_source: "Sector benchmark — NOT primary data"
+  opex_confidence: low
+  opex_verified: false
+
+working_capital_months: 2
+seasonality:
+  source: none
+  reason: >-
+    No poultry price series available from the data.gov.in resource, which
+    holds one day of records and carries no Egg or poultry commodity.
+  window_months: 0
+  confidence: none
+
+risk_flags:
+  requires_daily_collection: false
+  requires_all_weather_road: false
+  road_column: "pc11_vd_rd_all_wthr"
+  requires_veterinary_access: true
+  vet_column: "pc11_vd_vet_hosp"
+  requires_power: true
+  power_column: "pc11_vd_power_all"
+  market_access_columns: ["pc11_vd_mrkt", "pc11_vd_wkl_haat"]
+
+# Retrieval query for the district PLP (Phase 7 RAG). Explicit because the
+# display name alone ("Dairy (buffalo)") does not match how the PLP titles its
+# sections ("2.1.6 Animal Husbandry - Dairy").
+# Transcribed from the PLP table of contents — 2.1.7 Animal Husbandry - Poultry, PLP p.63. Retrieval prefers
+# these sections exactly; the semantic query below is only a fallback.
+plp_sections: ["2.1.7"]
+plp_query: "Animal Husbandry Poultry broiler layer birds district status"
+
+assumptions_source: "NABARD PLP Ahilyanagar 2025-26 (capex only); revenue and opex are unsourced benchmarks"

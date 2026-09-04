@@ -1,0 +1,58 @@
+# One command to bring the whole prototype up on a clean machine:
+#
+#     docker compose up
+#
+# PostGIS restores the pre-built Ahmadnagar district bundle on first start
+# (data/bundle/ahmadnagar.dump, ~4 MB), so no 8.9 GB SHRUG download and no ETL
+# run is needed to demo. MongoDB is hosted (MONGO_DB_URL) and optional — the
+# API falls back to an in-process provenance store and says so.
+services:
+  postgis:
+    image: postgis/postgis:15-3.4
+    container_name: udyam_postgis
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-udyam}
+      POSTGRES_USER: ${PGUSER:-udyam}
+      POSTGRES_PASSWORD: ${PGPASSWORD:-udyam}
+    ports:
+      - "${PGPORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./etl/sql:/docker-entrypoint-initdb.d:ro
+      - ./data/bundle:/bundle:ro
+    healthcheck:
+      # Readiness, not liveness, and over TCP specifically.
+      #   * pg_isready goes green while the first-boot bundle restore is still
+      #     running, so the API would query tables that do not exist yet.
+      #   * during init the server listens ONLY on the unix socket, so a
+      #     socket-based check also passes too early. -h 127.0.0.1 forces TCP,
+      #     which is refused until init finishes and the real server starts.
+      test: ["CMD-SHELL",
+             "psql -h 127.0.0.1 -U ${PGUSER:-udyam} -d ${PGDATABASE:-udyam} -c 'SELECT 1 FROM shrid_names LIMIT 1' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 10s
+      retries: 60
+      start_period: 30s
+    shm_size: 1gb
+
+  api:
+    build: .
+    container_name: udyam_api
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      PGHOST: postgis
+      PGPORT: 5432
+      PGDATABASE: ${PGDATABASE:-udyam}
+      PGUSER: ${PGUSER:-udyam}
+      PGPASSWORD: ${PGPASSWORD:-udyam}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.6-flash}
+      MONGO_DB_URL: ${MONGO_DB_URL:-}
+      MONGO_DB_NAME: ${MONGO_DB_NAME:-udyam}
+    ports:
+      - "${APIPORT:-8000}:8000"
+
+volumes:
+  pgdata:

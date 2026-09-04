@@ -1,0 +1,234 @@
+# Dairy (buffalo) — unit-economics template.
+#
+# Column names and sector codes here were resolved in Phase 0 recon against the
+# real SHRUG v2.2 data, NOT from IMPLEMENTATION_PLAN.md. See data/derived/RECON.md
+# section 3 for the crosswalk and its sanity check.
+
+sector_id: dairy_buffalo
+display_name:
+  en: "Dairy (buffalo)"
+  mr: "दुग्ध व्यवसाय (म्हैस)"
+unit: "animal"
+
+# ---------------------------------------------------------------------------
+# MARKET MAPPING — read the note before using any of this in M2.
+#
+# The plan proposed nic_codes ["01410","01440"] (raising cattle/buffaloes).
+# Those codes DO NOT EXIST in the Economic Census: the EC excludes agricultural
+# production entirely, and the lowest NIC-2008 code present anywhere in SHRIC
+# is 021 (forestry). Verified: 0 of 224 crosswalk rows map to NIC division 01.
+#
+# What DOES exist is SHRIC bucket 7 = NIC-2008 105 = "Manufacture of dairy
+# products" — milk chilling and processing plants. That is not a competitor to
+# a smallholder with two buffaloes. It is their BUYER.
+#
+# So the sign flips: more SHRIC 7 employment in the catchment is GOOD.
+# M2 must consume this as procurement capacity, never as a saturation numerator.
+# ---------------------------------------------------------------------------
+market_mapping:
+  shric_bucket: 7
+  shric_desc: "Dairy"
+  ec_column: "ec13_emp_shric_7"        # employment, NOT establishment count
+  measure: "employment"
+  nic_codes:                            # equivalent codes, all vintages
+    nic08_3d: ["105"]
+    nic04: ["1520"]
+    nic87: ["201"]
+  role: procurement_capacity            # <- positive signal, not competition
+  sign: positive
+  competitor_count:
+    available: false
+    reason: >-
+      Dairy farming (NIC-2008 0141, raising of cattle and buffaloes) is outside
+      the Economic Census frame. The number of competing dairy farmers in the
+      catchment is not measurable from any SHRUG module. M2 must emit a Fact
+      with a note saying so rather than substituting SHRIC 7, which measures a
+      different and oppositely-signed thing.
+  source: "SHRUG v2.2 shric_descriptions.csv + shric_NIC08_3d_key.csv"
+  verified: true
+  verified_how: >-
+    Geographic sanity check, Phase 0. SHRIC 7 employment in Ahmadnagar
+    concentrates in Kopargaon (307), Sangamner (267), Rahuri (87) and
+    Shrirampur (48) — the district's known milk-processing towns. District
+    location quotient is 0.64, i.e. unremarkable, which is expected and is
+    itself evidence for the reading above: NABARD's own PLP calls Ahilyanagar
+    the "leading district in dairy development" with 13.8 lakh cattle and 2.21
+    lakh buffaloes, yet the census sees only 1,016 dairy jobs. The census is
+    counting plants, not herds.
+
+# ---------------------------------------------------------------------------
+# CAPEX — NABARD's own published unit costs for this district-year.
+# ---------------------------------------------------------------------------
+capex:
+  nabard_unit: "1+1"                    # NABARD's staggered two-animal unit
+  unit_cost_inr: 180800
+  source: "NABARD PLP Ahilyanagar 2025-26, Annexure 4 — unit costs fixed by NABARD for 2024-25, row 10 'Buffalo Farming'"
+  source_file: "data/raw/plp/ahilyanagar.pdf"
+  year: 2024
+  geo_level: district
+  verified: true
+  bank_loan_factor: 0.85                # PLP A.7 row 2, "Buffalo Farming--2"
+  alternatives:                         # same annexure, for the M6 ranker
+    crossbred_cattle_1plus1_inr: 160340
+    dairy_cow_heifer_rearing_inr: 50000
+
+# ---------------------------------------------------------------------------
+# REVENUE — NOT YET SOURCED. Do not compute an envelope with these.
+#
+# Agmarknet cannot supply a milk price: filters[commodity]=Milk returns zero
+# records, because milk is procured by cooperatives at an administered rate and
+# never reaches a mandi. The base procurement rate must be transcribed by hand
+# from a published cooperative rate, the same way scheme rules are (PART 3.5).
+# ---------------------------------------------------------------------------
+monthly:
+  price_source: fixed_inr               # NOT agmarknet — see above
+
+  # Transcribed per MILK_PRICE_SOURCE.md. geo_level is state, NOT district:
+  # this is a Kolhapur union rate used as a Maharashtra proxy. Do not upgrade
+  # the confidence or drop the note — the provenance panel must show a user in
+  # Ahmadnagar that the price behind their revenue line came from elsewhere.
+  milk_price:
+    buffalo:
+      value: 62.18
+      unit: "INR_per_litre"
+      source: "Gokul Dairy (Kolhapur Zilla Sahakari Dudh Utpadak Sangh Ltd.) — official procurement page"
+      source_url: "https://www.gokulmilk.coop/procurement"
+      year: 2026
+      geo_level: "state"
+      confidence: "medium"
+      note: >-
+        Cooperative average purchase price incl. rate difference, FY2025-26.
+        Sourced from Kolhapur district (Gokul), not Ahmadnagar, because no
+        Ahmadnagar-specific published rate was found. Nearest actual union is
+        Sangamner Taluka Sahakari Dudh Utpadak Sangh Ltd. (Ghulewadi, Tal.
+        Sangamner) — replace this figure if their rate can be obtained
+        directly. Do not present as an Ahmadnagar-specific price without
+        updating geo_level and source.
+    cow:
+      value: 37.73
+      unit: "INR_per_litre"
+      source: "Gokul Dairy (Kolhapur Zilla Sahakari Dudh Utpadak Sangh Ltd.) — official procurement page"
+      source_url: "https://www.gokulmilk.coop/procurement"
+      year: 2026
+      geo_level: "state"
+      confidence: "medium"
+      note: >-
+        Same as buffalo entry above — Kolhapur-sourced proxy, not
+        Ahmadnagar-specific.
+  verified: true
+
+  state_subsidy_per_litre_inr: 5
+  state_subsidy_source: "NABARD PLP Ahilyanagar 2025-26 — Maharashtra milk subsidy, continuing from July 2024"
+  state_subsidy_verified: true
+
+  # ---- SOURCED per MILK_YIELD_OPEX_SOURCE.md ----------------------------
+  # All three remain geo_level: national / confidence: low. That is correct
+  # and deliberate: no Ahmadnagar- or even Maharashtra-specific unit-economics
+  # benchmark exists. Do not upgrade either field without a new source.
+  animal_type: buffalo
+  animals_per_unit: 2                   # NABARD "1+1" unit
+
+  yield:
+    value: 10.0
+    unit: "litres_per_animal_per_day"
+    source: >-
+      NABARD Model Bankable Project — Dairy Farming with Buffaloes (10-animal
+      unit), graded Murrah buffalo, via Pashudhan Praharee reproduction
+    source_url: "https://www.pashudhanpraharee.com/nabard-model-dairy-farming-project-report/"
+    year: null
+    geo_level: "national"
+    confidence: "low"
+    note: >-
+      NABARD's generic model project figure, undated, not Ahmadnagar-specific.
+      Applies during lactation only (270 days/yr); annualised average is ~7.4
+      L/day if a flat year-round figure is needed. Original source scaled for a
+      10-animal commercial unit; may not transfer exactly to a 1-2 animal
+      household unit.
+
+  # A buffalo does not yield for 365 days. The engine annualises with these
+  # rather than applying the lactation figure flat across the year.
+  lactation_days_per_year: 270
+  dry_days_per_year: 150
+
+  monthly_opex_per_animal:
+    value: 3483
+    unit: "INR_per_animal_per_month"
+    source: >-
+      Derived from NABARD Model Bankable Project feeding schedule and annual
+      cost table (feed, vet, labour, electricity, insurance), via Pashudhan
+      Praharee reproduction
+    source_url: "https://www.pashudhanpraharee.com/nabard-model-dairy-farming-project-report/"
+    year: null
+    geo_level: "national"
+    confidence: "low"
+    note: >-
+      Derived, not a single published line item — see MILK_YIELD_OPEX_SOURCE.md
+      for the calculation. Scaled down from a 10-animal commercial unit; labour
+      and vet costs are shared across the unit in the source model and may
+      understate true per-animal cost for a 1-2 animal household unit where
+      labour is the farmer's own unpaid time. Day-count discrepancy carried
+      forward, not reconciled: the source model's own table uses 270 lactation
+      + 150 dry = 420 days against a 365-day year, most likely because Year 1
+      has a different lactation/dry split from steady-state years 2-5. The
+      steady-state split is used here, and the 420 vs 365 mismatch is flagged
+      rather than silently corrected.
+
+  capex_per_animal:
+    value: 65400
+    unit: "INR_per_animal"
+    source: >-
+      NABARD Model Bankable Project — Dairy Farming with Buffaloes, capital
+      cost table (animal + transport + shed + calf shed + equipment share),
+      via Pashudhan Praharee
+    source_url: "https://www.pashudhanpraharee.com/nabard-model-dairy-farming-project-report/"
+    year: null
+    geo_level: "national"
+    confidence: "low"
+    note: >-
+      Includes a pro-rated share of shared equipment (chaff cutter) costed
+      across the 10-animal model unit; a genuinely standalone 1-2 animal
+      purchase may not need the full equipment share.
+
+  verified: true
+
+working_capital_months: 3
+
+seasonality:
+  source: none
+  reason: >-
+    The data.gov.in mandi resource holds a single day of records (170 rows for
+    all India) and carries no milk commodity at all, so no seasonal index can
+    be computed for this sector. Per PART 10, do not fabricate a curve. The
+    risk engine must omit the seasonal-collapse flag for dairy and say why.
+  window_months: 0
+  confidence: none
+
+# ---------------------------------------------------------------------------
+# RISK FLAGS — each wired to a real, verified VD11 column (RECON.md section 1).
+# ---------------------------------------------------------------------------
+risk_flags:
+  requires_daily_collection: true
+  requires_all_weather_road: true
+  road_column: "pc11_vd_rd_all_wthr"
+  requires_veterinary_access: true
+  vet_column: "pc11_vd_vet_hosp"
+  fodder_land_columns: ["pc11_vd_land_pst_grz", "pc11_vd_land_nt_swn"]
+  market_access_columns: ["pc11_vd_mrkt", "pc11_vd_wkl_haat", "pc11_vd_ams"]
+  banking_columns: ["pc11_vd_comm_bank", "pc11_vd_coop_bank", "pc11_vd_acs"]
+  single_buyer_dependency:
+    computable: true
+    from: "market_mapping.ec_column summed over the catchment"
+    note: >-
+      First recon reported this flag as uncomputable. The SHRIC crosswalk
+      resolves it: SHRIC 7 in the catchment IS the count of procurement
+      capacity. Low or zero SHRIC 7 within the ring means no buyer.
+
+# Retrieval query for the district PLP (Phase 7 RAG). Explicit because the
+# display name alone ("Dairy (buffalo)") does not match how the PLP titles its
+# sections ("2.1.6 Animal Husbandry - Dairy").
+# Transcribed from the PLP table of contents — 2.1.6 Animal Husbandry - Dairy, PLP p.62. Retrieval prefers
+# these sections exactly; the semantic query below is only a fallback.
+plp_sections: ["2.1.6"]
+plp_query: "Animal Husbandry Dairy milch animals buffaloes milk production district status"
+
+assumptions_source: "NABARD PLP Ahilyanagar 2025-26 (capex, subsidy); revenue and opex pending transcription"

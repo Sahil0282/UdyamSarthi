@@ -1,0 +1,19 @@
+scheme_id: NBCFDC_TERM_LOAN
+corporation: NBCFDC
+scheme_name: "Term Loan Scheme"
+target_group: OBC
+effective_from: 2024-04-01
+source_url: "https://nbcfdc.gov.in"          # PLACEHOLDER — verify actual page before demo
+verified: false                                # not hand-checked against live site
+income_ceiling_inr: 300000
+loan_to_cost_ratio: 0.90
+per_beneficiary_cap_inr: 1500000
+interest_slabs:
+  - { upto_inr: 500000,  annual_rate: 0.06 }
+  - { upto_inr: 1500000, annual_rate: 0.08 }
+repayment_years: 8
+moratorium_months: 6
+installment_frequency: quarterly
+state_overrides:
+  MH: {}
+notes: "Figures approximate published NBCFDC terms as of 2024. NOT re-verified live — replace before final submission if precision matters for scoring."

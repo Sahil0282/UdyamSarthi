@@ -1,0 +1,40 @@
+# ─── SECRETS — never commit ────────────────────────────────────────────────
+.env
+*.pem
+*.key
+
+# ─── Bulk source data (~11 GB) ─────────────────────────────────────────────
+# SHRUG is redistributed under CC BY-NC-SA and is large; download it yourself
+# from devdatalab.org/shrug. The 3.8 MB district bundle in data/bundle/ is
+# what the demo actually needs.
+Dataset/
+*.zip
+
+# Exclude data/raw contents level by level. A blanket `data/raw/` followed by
+# a `!` negation does NOT work: git cannot re-include anything beneath an
+# excluded directory, and negating the directory itself re-admits all 8.8 GB.
+data/raw/*
+!data/raw/plp/
+data/raw/plp/*
+# The NABARD district credit plan is a public document and the source for the
+# PLP citations. Kept at the ETL's default path so `python etl/60_plp_embed.py`
+# works straight after a clone.
+!data/raw/plp/ahilyanagar.pdf
+
+# ─── Generated / environment ───────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+node_modules/
+
+# ─── OS noise ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Redundant copies of files committed elsewhere ─────────────────────────
+/nbcfdc_term_loan.yaml
+/nbcfdc_micro_finance.yaml
+/MAH_Ahilyanagaar.pdf

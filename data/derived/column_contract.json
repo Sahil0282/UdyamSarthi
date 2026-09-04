@@ -1,0 +1,122 @@
+{
+  "target_district": "ahmadnagar",
+  "shrid_prefix": "11-27-522-",
+  "metric_crs": "EPSG:32643",
+  "engines": {
+    "M1 geo \u2014 resolution + geometry": {
+      "shrug/shrug-shrid-keys-csv/shrid_loc_names.csv": {
+        "path": "shrug/shrug-shrid-keys-csv/shrid_loc_names.csv",
+        "columns": [
+          "shrid2",
+          "state_name",
+          "district_name",
+          "subdistrict_name",
+          "village_name",
+          "town_name",
+          "place_name"
+        ],
+        "status": "OK",
+        "district_shrids": 1597,
+        "district_rows": 1597
+      },
+      "shrug/shrug-shrid-poly-shp/shrid2_open.shp": {
+        "path": "shrug/shrug-shrid-poly-shp/shrid2_open.shp",
+        "columns": [
+          "shrid2",
+          "pc11_id",
+          "polysource"
+        ],
+        "status": "OK",
+        "district_shrids": 1597,
+        "district_rows": 1597
+      }
+    },
+    "M2 market \u2014 catchment + saturation": {
+      "shrug/shrug-pca11-csv/pc11_pca_clean_shrid.csv": {
+        "path": "shrug/shrug-pca11-csv/pc11_pca_clean_shrid.csv",
+        "columns": [
+          "shrid2",
+          "pc11_pca_tot_p",
+          "pc11_pca_no_hh"
+        ],
+        "status": "OK",
+        "district_shrids": 1597,
+        "district_rows": 1597
+      },
+      "shrug/shrug-ec13-csv/ec13_shrid.csv": {
+        "path": "shrug/shrug-ec13-csv/ec13_shrid.csv",
+        "columns": [
+          "shrid2",
+          "ec13_count_all",
+          "ec13_emp_all",
+          "ec13_emp_shric_1",
+          "ec13_emp_shric_45",
+          "ec13_emp_shric_90"
+        ],
+        "status": "OK",
+        "district_shrids": 1588,
+        "district_rows": 1588
+      },
+      "shrug/shrug-viirs-annual-csv/viirs_annual_shrid.csv": {
+        "path": "shrug/shrug-viirs-annual-csv/viirs_annual_shrid.csv",
+        "columns": [
+          "shrid2",
+          "year",
+          "category",
+          "viirs_annual_mean",
+          "viirs_annual_sum"
+        ],
+        "status": "OK",
+        "district_shrids": 1597,
+        "district_rows": 38328
+      }
+    },
+    "M4 affordability \u2014 household drawings": {
+      "shrug/shrug-secc-mord-rural-csv/secc_rural_shrid.csv": {
+        "path": "shrug/shrug-secc-mord-rural-csv/secc_rural_shrid.csv",
+        "columns": [
+          "shrid2",
+          "secc_hh",
+          "inc_5k_plus_share",
+          "inc_10k_plus_share",
+          "ag_inc_hh",
+          "inc_source_enterpr_share",
+          "inc_source_cultiv_share"
+        ],
+        "status": "OK",
+        "district_shrids": 1562,
+        "district_rows": 1562
+      }
+    },
+    "M5 risk \u2014 amenities": {
+      "shrug/shrug-vd11-csv/pc11_vd_clean_shrid.csv": {
+        "path": "shrug/shrug-vd11-csv/pc11_vd_clean_shrid.csv",
+        "columns": [
+          "shrid2",
+          "pc11_vd_rd_all_wthr",
+          "pc11_vd_rd_p_btr",
+          "pc11_vd_rd_k_grav",
+          "pc11_vd_power_all",
+          "pc11_vd_power_dom",
+          "pc11_vd_comm_bank",
+          "pc11_vd_coop_bank",
+          "pc11_vd_acs",
+          "pc11_vd_shg",
+          "pc11_vd_atm_dist",
+          "pc11_vd_mrkt",
+          "pc11_vd_wkl_haat",
+          "pc11_vd_ams",
+          "pc11_vd_vet_hosp",
+          "pc11_vd_town_dist",
+          "pc11_vd_subdistrict_hq_dist",
+          "pc11_vd_land_pst_grz",
+          "pc11_vd_land_nt_swn",
+          "pc11_vd_land_src_irr"
+        ],
+        "status": "OK",
+        "district_shrids": 1578,
+        "district_rows": 1578
+      }
+    }
+  }
+}

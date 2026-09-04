@@ -1,0 +1,82 @@
+# Kirana / general provisions shop.
+#
+# This is the ONE sector in the current set whose activity IS observed by the
+# Economic Census, so `role: competition` and the saturation percentile means
+# what the plan originally assumed it would mean everywhere.
+sector_id: kirana_retail
+display_name: { en: "Kirana (general store)", mr: "किराणा दुकान" }
+unit: "shop"
+
+market_mapping:
+  shric_bucket: 49
+  shric_desc: "Retail in non-specialized stores"
+  ec_column: "ec13_emp_shric_49"
+  measure: "employment"
+  nic_codes: { nic08_3d: ["471", "478", "479"], nic04: ["5211"], nic87: ["620"] }
+  role: competition
+  sign: negative
+  competitor_count:
+    available: false
+    reason: >-
+      The Economic Census has no per-sector ESTABLISHMENT count, only
+      employment. Retail employment in the catchment is a genuine competition
+      signal for this sector, but it counts people, not shops.
+  source: "SHRUG v2.2 shric_descriptions.csv + shric_NIC08_3d_key.csv"
+  verified: true
+
+capex:
+  nabard_unit: "1 shop"
+  unit_cost_inr: 150000
+  source: "Unsourced benchmark — the PLP Annexure 4 has no kirana/general-store unit cost"
+  source_file: null
+  year: null
+  geo_level: national
+  verified: false
+  bank_loan_factor: 0.85
+
+monthly:
+  revenue_model: fixed_margin
+  units_per_unit: 1
+  opex_scales_with_units: false
+  gross_revenue_inr_per_month:
+    value: 14000
+    source: "Sector benchmark — NOT primary data, NOT PLP-sourced"
+    year: null
+    geo_level: national
+    confidence: low
+    note: >-
+      Illustrative gross monthly margin on a village kirana shop. Not a
+      published benchmark and not locally surveyed. Retail margin depends
+      heavily on how many shops already trade in the catchment, which the
+      market engine scores separately.
+  opex_per_unit_inr: { rent: 2000, electricity: 600, transport: 900 }
+  opex_source: "Sector benchmark — NOT primary data"
+  opex_confidence: low
+  opex_verified: false
+
+working_capital_months: 3
+seasonality:
+  source: none
+  reason: >-
+    Kirana turnover is not a mandi commodity; the data.gov.in resource cannot
+    supply a seasonal index for it.
+  window_months: 0
+  confidence: none
+
+risk_flags:
+  requires_daily_collection: false
+  requires_all_weather_road: false
+  road_column: "pc11_vd_rd_all_wthr"
+  requires_power: true
+  power_column: "pc11_vd_power_all"
+  market_access_columns: ["pc11_vd_mrkt", "pc11_vd_wkl_haat"]
+
+# Retrieval query for the district PLP (Phase 7 RAG). Explicit because the
+# display name alone ("Dairy (buffalo)") does not match how the PLP titles its
+# sections ("2.1.6 Animal Husbandry - Dairy").
+# Transcribed from the PLP table of contents — Chapter 3 Credit potential for MSMEs, PLP p.71. Retrieval prefers
+# these sections exactly; the semantic query below is only a fallback.
+plp_sections: ["3.1", "3.2"]
+plp_query: "MSME retail trade small enterprises shops Udyam registered district"
+
+assumptions_source: "All figures are unsourced benchmarks — this template is the weakest in the set and its confidence labelling says so"
