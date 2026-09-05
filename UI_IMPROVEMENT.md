@@ -14,8 +14,8 @@ Nobody looking at it would doubt the data is real.
 But it was never designed. It reads as a government portal for reasons that are
 specific and fixable, not vague:
 
-**The whole UI is 65 lines of CSS.** Twelve different font sizes between 10px and
-17px, chosen ad hoc (12.5px, 11.5px, 10.5px) with no scale. Nine flat colours and
+**The whole UI is 65 lines of CSS.** Ten different font sizes between 10px and
+17px, chosen ad hoc (10.5px, 11.5px, 12.5px) with no scale. Nine flat colours and
 no tints. Zero transitions, zero animations, zero SVG icons, one media query, no
 dark mode, and a system font stack. Those aren't stylistic preferences — they are
 the absence of a design system, and the eye reads that absence immediately.
@@ -160,8 +160,9 @@ version needs the same treatment and a proper Devanagari-capable font.
 ### 6. No type scale
 **Severity: high — this is the root cause behind several other findings**
 
-**Before.** Twelve distinct sizes: 10, 10.5, 11, 11.5, 12, 12.5, 13, 14, 16, 17px,
-several of them at half-pixel values. `font:14px/1.55 -apple-system…` on body and
+**Before.** Ten distinct sizes: 10, 10.5, 11, 11.5, 12, 12.5, 13, 14, 16, 17px,
+three of them at half-pixel values. (The audit first said twelve; the verified
+count is nine `font-size` declarations plus 14px in the body shorthand.) `font:14px/1.55 -apple-system…` on body and
 nothing else declared. No webfont.
 
 **Why it reads as low quality.** Arbitrary half-pixel sizes are the visual signature

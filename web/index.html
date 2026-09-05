@@ -4,74 +4,383 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Udyam Saarthi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Mukta carries Devanagari AND Latin from one family (Ek Type, Mumbai), so a
+     Marathi advisory never falls back to a system face mid-sentence. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Mukta:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
-  :root{--bg:#faf9f7;--fg:#1a1a18;--mut:#6b6a66;--line:#e2e0db;--card:#fff;
-        --ok:#1f7a4d;--warn:#a8620a;--bad:#a52a2a;--acc:#2b5f8f}
-  *{box-sizing:border-box}
-  body{margin:0;font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-       background:var(--bg);color:var(--fg)}
-  header{padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);
-         display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
-  h1{font-size:17px;margin:0;letter-spacing:-.01em}
-  .sub{color:var(--mut);font-size:12px}
-  .wrap{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:0;height:calc(100vh - 53px)}
-  @media(max-width:900px){.wrap{grid-template-columns:1fr;height:auto}#map{height:52vh}}
-  #map{width:100%;height:100%}
-  .panel{overflow-y:auto;border-left:1px solid var(--line);background:var(--card);padding:16px}
-  .form{display:grid;gap:8px;margin-bottom:14px}
-  .form label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
-  input,select,button{font:inherit;padding:7px 9px;border:1px solid var(--line);
-                      border-radius:6px;background:#fff;color:var(--fg)}
-  button{cursor:pointer;background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
-  button.ghost{background:#fff;color:var(--acc)}
-  button:disabled{opacity:.5;cursor:default}
-  .verdict{border:1px solid var(--line);border-radius:9px;padding:13px;margin-bottom:13px}
-  .verdict.PROCEED{border-left:4px solid var(--ok)}
-  .verdict.PROCEED_WITH_CHANGES{border-left:4px solid var(--warn)}
-  .verdict.RECONSIDER{border-left:4px solid var(--bad)}
-  .vtitle{font-size:16px;font-weight:700;letter-spacing:-.01em}
-  .vtitle.PROCEED{color:var(--ok)}.vtitle.PROCEED_WITH_CHANGES{color:var(--warn)}
-  .vtitle.RECONSIDER{color:var(--bad)}
-  .chip{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:99px;
-        border:1px solid var(--line);color:var(--mut);margin-right:5px}
-  .chip.low{background:#fdf3e7;border-color:#e9c99a;color:#8a5008}
-  h2{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);
-     margin:16px 0 7px;font-weight:600}
-  table{width:100%;border-collapse:collapse}
-  td{padding:5px 0;border-bottom:1px solid var(--line);vertical-align:top}
-  td.k{color:var(--mut);font-size:12.5px}
-  td.v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;
-       max-width:230px}
-  .num{cursor:pointer;border-bottom:1px dotted var(--acc);color:var(--acc);font-weight:600}
-  .num:hover{background:#eef4fa}
-  /* lives inside a nowrap cell, so it must reset wrapping and alignment itself */
-  .prov{background:#f4f2ee;border:1px solid var(--line);border-radius:7px;padding:10px;
-        margin:7px 0;font-size:12px;white-space:normal;text-align:left;
-        max-width:100%;overflow-wrap:anywhere}
-  .prov b{display:block;margin-bottom:3px}
-  .prov .meta{color:var(--mut);margin:3px 0}
-  .flag{padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
-  .sev{font-size:10px;font-weight:700;text-transform:uppercase;margin-right:6px}
-  .sev.high{color:var(--bad)}.sev.medium{color:var(--warn)}.sev.low{color:var(--mut)}
-  .alt{border:1px solid var(--line);border-radius:7px;padding:9px;margin-bottom:7px}
-  .prose{background:#f4f2ee;border-radius:7px;padding:11px;font-size:13px;line-height:1.6}
-  .err{color:var(--bad)}
-  .voicebar{display:flex;gap:8px;align-items:center;margin-bottom:10px}
-  .voicebar button{flex:0 0 auto}
-  button.rec{background:var(--bad);border-color:var(--bad)}
-  .heard{background:#eef4fa;border:1px solid #c9dced;border-radius:7px;padding:8px;
-         font-size:12.5px;margin-bottom:10px}
-  .heard b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
-           color:var(--mut);margin-bottom:3px}
-  ul{margin:5px 0;padding-left:17px}li{margin:3px 0;font-size:12.5px}
-  .legend{position:absolute;bottom:12px;left:12px;background:rgba(255,255,255,.94);
-          border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-size:11.5px}
-  .legend div{display:flex;align-items:center;gap:6px;margin:2px 0}
-  .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
+/* ═══ TOKENS ═══════════════════════════════════════════════════════════════
+   Ramps, not nine flat colours. Semantic verdict hues are kept separate from
+   the brand accent so "this is a refusal" never depends on the same variable
+   as "this is a link".                                                      */
+:root{
+  --paper:#f5f4f1;   --surface:#fffefc;  --raised:#faf9f6;  --sunken:#efeeea;
+  --ink:#171a19;     --ink-2:#4a514d;    --ink-3:#767d78;   --ink-4:#9aa19c;
+  --line:#e2e1dc;    --line-2:#d2d1cb;   --line-3:#c0bfb8;
+
+  --acc:#1d5f8a;     --acc-2:#2e7cae;    --acc-wash:#e8f0f6;  --acc-line:#bcd6e6;
+
+  --go:#1c6b45;      --go-2:#248a59;     --go-wash:#e5efe9;   --go-line:#b6d4c3;
+  --warn:#8a5a12;    --warn-2:#b0741a;   --warn-wash:#f4ecdd; --warn-line:#e0c99b;
+  --stop:#9c3324;    --stop-2:#c04430;   --stop-wash:#f6e8e5; --stop-line:#e3bcb3;
+
+  /* Fraunces carries no Devanagari, so Mukta sits directly behind it: the
+     browser falls through per-codepoint, and Marathi resolves to Mukta rather
+     than a system serif mid-sentence. */
+  --f-disp:"Fraunces","Mukta","Noto Sans Devanagari",Georgia,serif;
+  --f-ui:"Mukta","Noto Sans Devanagari",system-ui,-apple-system,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+
+  /* modular scale ~1.22 */
+  --t-11:11px; --t-12:12px; --t-13:13px; --t-15:15px;
+  --t-17:17px; --t-21:21px; --t-26:26px; --t-34:34px;
+
+  --r-sm:5px; --r:9px; --r-lg:14px;
+  --sh-1:0 1px 2px rgba(23,26,25,.05);
+  --sh-2:0 2px 10px rgba(23,26,25,.07),0 1px 2px rgba(23,26,25,.05);
+  --sh-3:0 8px 28px rgba(23,26,25,.11),0 2px 6px rgba(23,26,25,.06);
+  --panel-w:436px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#101312;  --surface:#181c1a; --raised:#1e2321; --sunken:#0c0f0e;
+    --ink:#e8ece9;    --ink-2:#adb5b0;   --ink-3:#8b938e;  --ink-4:#6b736e;
+    --line:#2a302d;   --line-2:#363d39;  --line-3:#454d48;
+    --acc:#63a9d4;    --acc-2:#8cc3e4;   --acc-wash:#14242e; --acc-line:#28454f;
+    --go:#4fb583;     --go-2:#73c99e;    --go-wash:#12241b;  --go-line:#255840;
+    --warn:#d9a055;   --warn-2:#e8b878;  --warn-wash:#2a2013; --warn-line:#5a4522;
+    --stop:#e07a63;   --stop-2:#ec9b88;  --stop-wash:#2b1714; --stop-line:#5c2f26;
+    --sh-1:0 1px 2px rgba(0,0,0,.3);
+    --sh-2:0 2px 10px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.3);
+    --sh-3:0 8px 28px rgba(0,0,0,.45),0 2px 6px rgba(0,0,0,.3);
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--paper);color:var(--ink);
+  font-family:var(--f-ui);font-size:var(--t-15);line-height:1.55;
+  -webkit-font-smoothing:antialiased;font-feature-settings:"kern" 1;
+}
+button,input,select{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:3px}
+
+/* ═══ CHROME ═══ */
+.top{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:11px 20px;background:var(--surface);
+  border-bottom:1px solid var(--line);position:relative;z-index:5
+}
+.brand{font-family:var(--f-disp);font-weight:600;font-size:var(--t-17);letter-spacing:-.01em}
+.brand .dev{font-weight:400;color:var(--ink-2);margin-right:6px}
+.tagline{font-size:var(--t-12);color:var(--ink-3)}
+.top .spacer{margin-left:auto}
+.ctx{
+  font-size:var(--t-11);color:var(--ink-3);font-family:var(--f-num);
+  letter-spacing:.04em;text-transform:uppercase
+}
+
+.shell{display:grid;grid-template-columns:minmax(0,1fr) var(--panel-w);height:calc(100vh - 47px)}
+.mapwrap{position:relative;overflow:hidden;background:var(--sunken)}
+#map{position:absolute;inset:0}
+.panel{
+  overflow-y:auto;overscroll-behavior:contain;
+  border-left:1px solid var(--line);background:var(--paper);
+  padding:16px 18px 60px;display:flex;flex-direction:column;gap:14px
+}
+/* Flex children shrink by default, which squeezed every section and clipped
+   the hero figure. The panel scrolls; its children keep their natural height. */
+.panel>*{flex:0 0 auto}
+
+/* ═══ VERDICT HERO — above the form, and unmistakable ═══ */
+.hero{
+  border-radius:var(--r-lg);padding:18px 18px 16px;position:relative;
+  overflow:hidden;box-shadow:var(--sh-2);border:1px solid var(--line-2);
+  background:var(--surface);
+  animation:rise .34s cubic-bezier(.2,.7,.3,1) both
+}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.hero::before{content:"";position:absolute;inset:0 0 auto;height:3px}
+.hero.PROCEED{background:linear-gradient(176deg,var(--go-wash),var(--surface) 62%);border-color:var(--go-line)}
+.hero.PROCEED::before{background:var(--go)}
+.hero.PROCEED_WITH_CHANGES{background:linear-gradient(176deg,var(--warn-wash),var(--surface) 62%);border-color:var(--warn-line)}
+.hero.PROCEED_WITH_CHANGES::before{background:var(--warn)}
+.hero.RECONSIDER{background:linear-gradient(176deg,var(--stop-wash),var(--surface) 58%);border-color:var(--stop-line)}
+.hero.RECONSIDER::before{background:var(--stop)}
+
+.vlabel{
+  display:flex;align-items:center;gap:7px;font-family:var(--f-num);
+  font-size:var(--t-11);letter-spacing:.12em;text-transform:uppercase;font-weight:500
+}
+.hero.PROCEED .vlabel{color:var(--go)}
+.hero.PROCEED_WITH_CHANGES .vlabel{color:var(--warn)}
+.hero.RECONSIDER .vlabel{color:var(--stop)}
+.vtitle{
+  font-family:var(--f-disp);font-size:var(--t-34);line-height:1.04;font-weight:600;
+  letter-spacing:-.022em;margin:6px 0 0;text-wrap:balance;text-transform:none
+}
+.hero.PROCEED_WITH_CHANGES .vtitle{font-size:var(--t-26)}
+.hero.PROCEED .vtitle{color:var(--go)}
+.hero.PROCEED_WITH_CHANGES .vtitle{color:var(--warn)}
+.hero.RECONSIDER .vtitle{color:var(--stop)}
+.vsub{font-size:var(--t-15);color:var(--ink-2);margin:7px 0 0;max-width:34ch;line-height:1.42}
+.vmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
+
+.chip{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--f-num);
+  font-size:var(--t-11);padding:3px 8px;border-radius:99px;
+  border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+  white-space:nowrap
+}
+.chip b{font-weight:600;color:var(--ink)}
+/* Confidence must get MORE legible, not less. Low confidence is loud on purpose. */
+.chip.conf-low{background:var(--warn-wash);border-color:var(--warn-line);color:var(--warn);font-weight:600}
+.chip.conf-medium{background:var(--acc-wash);border-color:var(--acc-line);color:var(--acc)}
+.chip.conf-high{background:var(--go-wash);border-color:var(--go-line);color:var(--go)}
+
+/* ═══ BLOCKING GATES — the refusal, promoted ═══ */
+.gates{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.gate{
+  display:flex;gap:10px;align-items:flex-start;padding:10px 12px;
+  background:var(--surface);border:1px solid var(--stop-line);
+  border-left:3px solid var(--stop);border-radius:var(--r-sm)
+}
+.gate .gi{flex:0 0 16px;margin-top:1px;color:var(--stop)}
+.gate .gt{font-weight:600;font-size:var(--t-13);color:var(--stop);letter-spacing:.01em}
+.gate .gd{font-size:var(--t-13);color:var(--ink-2);margin-top:2px;line-height:1.4}
+
+/* ═══ QUERY SUMMARY / FORM ═══ */
+.query{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh-1)
+}
+.qsum{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;width:100%;
+      background:none;border:0;text-align:left}
+.qsum:hover{background:var(--raised)}
+.qsum .qi{color:var(--ink-3);flex:0 0 16px}
+.qsum .qtext{flex:1;min-width:0;font-size:var(--t-13);color:var(--ink-2);
+             overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qsum .qtext b{color:var(--ink);font-weight:600}
+.qsum .qact{font-size:var(--t-12);color:var(--acc);font-weight:600;white-space:nowrap}
+.qform{padding:13px;display:grid;gap:9px;border-top:1px solid var(--line)}
+.qform.solo{border-top:0}
+label{font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.07em;
+      text-transform:uppercase;color:var(--ink-3);font-weight:500}
+input,select{
+  width:100%;padding:8px 10px;border:1px solid var(--line-2);border-radius:var(--r-sm);
+  background:var(--surface);transition:border-color .14s,box-shadow .14s
+}
+input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-wash);outline:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  padding:9px 14px;border-radius:var(--r-sm);border:1px solid transparent;
+  background:var(--acc);color:#fff;font-weight:600;font-size:var(--t-13);cursor:pointer;
+  transition:background .14s,transform .1s,box-shadow .14s;box-shadow:var(--sh-1)
+}
+.btn:hover:not(:disabled){background:var(--acc-2)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn.ghost{background:var(--surface);color:var(--acc);border-color:var(--line-2);box-shadow:none}
+.btn.ghost:hover:not(:disabled){background:var(--acc-wash);border-color:var(--acc-line)}
+.btn.stop{background:var(--surface);color:var(--stop);border-color:var(--stop-line)}
+.btn.stop:hover:not(:disabled){background:var(--stop-wash)}
+.btn.rec{background:var(--stop);color:#fff}
+.btn.wide{width:100%}
+.spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;
+      border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.voicebar{display:flex;gap:7px}
+
+/* ═══ SECTIONS ═══ */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+     box-shadow:var(--sh-1);overflow:hidden}
+.sech{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line)}
+.sech h2{margin:0;font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.09em;
+         text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sech .si{color:var(--ink-4);flex:0 0 15px}
+.sech .cnt{margin-left:auto;font-family:var(--f-num);font-size:var(--t-11);color:var(--ink-4)}
+.secb{padding:12px 13px}
+
+/* ═══ NARRATION ═══ */
+.narr-lead{font-family:var(--f-disp);font-size:var(--t-17);line-height:1.44;
+           color:var(--ink);margin:0 0 9px;text-wrap:pretty}
+.narr-p{font-size:var(--t-13);line-height:1.62;color:var(--ink-2);margin:0 0 8px}
+.narr-p:last-child{margin-bottom:0}
+.narr-p em{font-style:normal;font-family:var(--f-num);font-size:.94em;font-weight:600;
+           color:var(--ink);background:var(--sunken);padding:.05em .3em;border-radius:3px}
+.narr-more{background:none;border:0;padding:4px 0 0;color:var(--acc);font-weight:600;
+           font-size:var(--t-12);cursor:pointer;font-family:var(--f-ui)}
+.narr-more:hover{text-decoration:underline}
+
+/* ═══ FINANCIAL ROADMAP ═══ */
+.hero-fig{padding:14px 13px 13px;background:linear-gradient(180deg,var(--acc-wash),transparent)}
+.hero-fig .hl{font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.08em;
+              text-transform:uppercase;color:var(--acc);font-weight:600;margin-bottom:3px}
+.hero-fig .hv{font-family:var(--f-num);font-size:var(--t-26);font-weight:600;
+              letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.hero-fig .hsub{font-size:var(--t-12);color:var(--ink-2);margin-top:5px}
+.hero-fig .hsub s{color:var(--ink-4);text-decoration-thickness:1px}
+
+.bars{display:flex;flex-direction:column;gap:7px;padding:11px 13px;border-top:1px solid var(--line)}
+.bar{display:grid;grid-template-columns:78px 1fr auto;gap:9px;align-items:center;
+     font-size:var(--t-12)}
+.bar .bl{color:var(--ink-3);font-size:var(--t-11);text-align:right}
+.bar .bt{height:9px;border-radius:99px;background:var(--sunken);overflow:hidden;
+         border:1px solid var(--line)}
+.bar .bt{display:block}
+.bar .bf{display:block;height:100%;border-radius:99px;
+         transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.bar .bv{font-family:var(--f-num);font-size:var(--t-11);font-variant-numeric:tabular-nums;
+         color:var(--ink);font-weight:600;min-width:66px;text-align:right}
+
+.flow{padding:11px 13px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:1px}
+.frow{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:var(--t-13)}
+.frow .fl{color:var(--ink-2);flex:1;min-width:0}
+.frow .fv{font-family:var(--f-num);font-variant-numeric:tabular-nums;white-space:nowrap;
+          font-size:var(--t-13)}
+.frow.sum{border-top:1px solid var(--line);margin-top:4px;padding-top:8px;font-weight:600}
+.frow.sum .fl,.frow.sum .fv{color:var(--ink);font-weight:600}
+.frow .op{font-family:var(--f-num);color:var(--ink-4);font-size:var(--t-12);width:10px}
+
+.assump{padding:10px 13px;border-top:1px solid var(--line);background:var(--raised)}
+.assump .al{font-family:var(--f-num);font-size:var(--t-11);letter-spacing:.07em;
+            text-transform:uppercase;color:var(--ink-4);margin-bottom:7px}
+.arow{display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:var(--t-12)}
+.arow .fl{color:var(--ink-3);flex:1}
+
+/* ═══ TAPPABLE NUMBER + PROVENANCE POPOVER ═══ */
+.num{
+  cursor:pointer;font-family:var(--f-num);font-variant-numeric:tabular-nums;
+  font-weight:600;color:var(--ink);border-bottom:1px dashed var(--line-3);
+  padding-bottom:1px;transition:color .14s,border-color .14s,background .14s;
+  border-radius:2px
+}
+.num:hover{color:var(--acc);border-bottom-color:var(--acc)}
+.num.open{color:var(--acc);border-bottom-color:transparent;background:var(--acc-wash);
+          box-shadow:0 0 0 3px var(--acc-wash)}
+.provwrap{position:relative}
+.prov{
+  margin:8px 0 4px;background:var(--surface);border:1px solid var(--acc-line);
+  border-radius:var(--r);padding:11px 12px;box-shadow:var(--sh-3);position:relative;
+  animation:pop .18s cubic-bezier(.2,.7,.3,1) both;white-space:normal;text-align:left
+}
+@keyframes pop{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.prov::before{
+  content:"";position:absolute;top:-6px;left:18px;width:10px;height:10px;
+  background:var(--surface);border-left:1px solid var(--acc-line);
+  border-top:1px solid var(--acc-line);transform:rotate(45deg)
+}
+.prov .psrc{font-weight:600;font-size:var(--t-13);line-height:1.35;margin-bottom:7px}
+.prov .pmeta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.prov .pnote{font-size:var(--t-12);line-height:1.55;color:var(--ink-2);
+             overflow-wrap:anywhere}
+
+/* ═══ RISK FLAGS — severity in shape AND colour ═══ */
+.flag{display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.flag:last-child{border-bottom:0}
+.flag .fi{flex:0 0 15px;margin-top:2px}
+.flag.high .fi{color:var(--stop)} .flag.medium .fi{color:var(--warn)} .flag.low .fi{color:var(--ink-4)}
+.flag .fm{font-size:var(--t-13);line-height:1.45;color:var(--ink-2)}
+.flag .fc{font-family:var(--f-num);font-size:var(--t-11);color:var(--ink-4);
+          letter-spacing:.04em;display:block;margin-bottom:2px}
+.flag.high .fc{color:var(--stop)} .flag.medium .fc{color:var(--warn)}
+
+/* ═══ ALTERNATIVES ═══ */
+.alt{display:flex;flex-direction:column;gap:5px;padding:11px 0;border-bottom:1px solid var(--line)}
+.alt:last-child{border-bottom:0}
+.alt .ah{display:flex;align-items:baseline;gap:8px}
+.alt .an{font-weight:600;font-size:var(--t-13);flex:1}
+.alt .sbar{display:block;height:6px;border-radius:99px;background:var(--sunken);
+           overflow:hidden;border:1px solid var(--line)}
+.alt .sfill{display:block;height:100%;background:var(--acc);border-radius:99px;
+            transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.alt .aw{font-size:var(--t-11);color:var(--ink-3);line-height:1.45}
+.alt .cite{font-family:var(--f-num);font-size:var(--t-11);color:var(--ink-4);
+           display:flex;gap:5px;align-items:baseline}
+
+ul.plain{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:6px}
+ul.plain li{font-size:var(--t-13);line-height:1.5;color:var(--ink-2)}
+ul.plain li::marker{color:var(--ink-4)}
+
+.banner{
+  display:flex;gap:9px;padding:10px 12px;border-radius:var(--r-sm);
+  background:var(--warn-wash);border:1px solid var(--warn-line);
+  font-size:var(--t-12);line-height:1.45;color:var(--warn);margin-top:12px
+}
+.banner b{font-weight:700}
+
+/* ═══ SKELETONS — nothing asserts while loading ═══ */
+.skel{background:linear-gradient(90deg,var(--sunken) 25%,var(--line) 37%,var(--sunken) 63%);
+      background-size:400% 100%;animation:sh 1.3s ease-in-out infinite;border-radius:5px}
+@keyframes sh{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.sk-hero{border-radius:var(--r-lg);padding:18px;border:1px solid var(--line);
+         background:var(--surface);display:flex;flex-direction:column;gap:10px}
+.sk-line{height:11px} .sk-title{height:30px;width:62%} .sk-chip{height:19px;width:96px;border-radius:99px}
+.sk-row{height:11px;width:100%}
+
+.empty{padding:26px 16px;text-align:center;color:var(--ink-3);font-size:var(--t-13)}
+.empty .ei{color:var(--ink-4);margin-bottom:9px}
+.err{padding:11px 13px;border-radius:var(--r-sm);background:var(--stop-wash);
+     border:1px solid var(--stop-line);color:var(--stop);font-size:var(--t-13)}
+
+/* ═══ MAP FURNITURE ═══ */
+.legend{
+  position:absolute;left:13px;bottom:24px;background:var(--surface);
+  border:1px solid var(--line-2);border-radius:var(--r);padding:10px 12px;
+  box-shadow:var(--sh-2);font-size:var(--t-12);min-width:172px;z-index:2
+}
+.legend .lrow{display:flex;align-items:center;gap:8px;padding:3px 0}
+.legend .lk{width:13px;height:13px;border-radius:3px;flex:0 0 13px}
+.legend .lk.dot{border-radius:99px}
+.legend .lt{flex:1;color:var(--ink-2)}
+.legend .lv{font-family:var(--f-num);font-size:var(--t-11);color:var(--ink);font-weight:600}
+.legend .lnone{color:var(--stop);font-weight:600;font-size:var(--t-11);font-family:var(--f-num)}
+.mapnote{
+  position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:3;
+  display:flex;align-items:center;gap:8px;padding:9px 14px;border-radius:99px;
+  background:var(--stop);color:#fff;font-size:var(--t-13);font-weight:600;
+  box-shadow:var(--sh-3);animation:rise .34s cubic-bezier(.2,.7,.3,1) both;max-width:88%
+}
+.ringlab{
+  font-family:var(--f-num);font-size:10px;letter-spacing:.06em;font-weight:600;
+  color:var(--acc);background:var(--surface);border:1px solid var(--acc-line);
+  padding:2px 7px;border-radius:99px;box-shadow:var(--sh-1);white-space:nowrap
+}
+.maploading{position:absolute;inset:0;background:var(--paper);opacity:.55;z-index:2;
+            pointer-events:none;transition:opacity .25s}
+.maplibregl-popup-content{
+  font-family:var(--f-ui);border-radius:var(--r);padding:9px 12px;box-shadow:var(--sh-3);
+  background:var(--surface);color:var(--ink);border:1px solid var(--line-2)
+}
+.maplibregl-popup-content b{font-size:var(--t-13)}
+.maplibregl-popup-content .pp{font-family:var(--f-num);font-size:var(--t-11);color:var(--ink-2)}
+.maplibregl-popup-tip{border-top-color:var(--surface)!important;
+                      border-bottom-color:var(--surface)!important}
+.maplibregl-ctrl-group{border-radius:var(--r-sm)!important;box-shadow:var(--sh-2)!important;
+                       border:1px solid var(--line-2)!important}
+
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr;height:auto}
+  /* The map needs an explicit height here: its parent has no intrinsic size in
+     a single-column grid, so the canvas collapsed to zero before. */
+  .mapwrap{height:min(46vh,340px);position:relative}
+  .panel{border-left:0;border-top:1px solid var(--line);height:auto;overflow:visible}
+  .legend{position:static;margin:0;box-shadow:none;border:0;border-top:1px solid var(--line);
+          border-radius:0;display:flex;flex-wrap:wrap;gap:4px 14px;padding:8px 13px}
+  .legend .lrow{padding:0}
+  :root{--panel-w:100%}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
 </style>
 </head>
 <body>
@@ -79,332 +388,554 @@
 <script>
 const e = React.createElement;
 const API = location.origin;
-const fmt = v => v === null || v === undefined ? "n/a"
-  : (typeof v === "number" ? v.toLocaleString("en-IN", {maximumFractionDigits:2}) : String(v));
 
-/* ---------- a tappable number: every one shows its provenance ---------- */
-function Num({fact, prefix}) {
-  const [open, setOpen] = React.useState(false);
-  if (!fact || typeof fact !== "object") return e("span", null, fmt(fact));
-  return e(React.Fragment, null,
-    e("span", {className:"num", onClick:()=>setOpen(!open),
-               title:"Tap to see source"},
-      (prefix||"") + fmt(fact.value)),
-    open && e("div", {className:"prov"},
-      e("b", null, fact.source || "no source"),
-      e("div", {className:"meta"},
-        `year ${fact.year ?? "n/a"} · ${fact.geo_level} level · confidence ${fact.confidence}`
-        + (fact.unit ? ` · ${fact.unit}` : "")),
-      fact.note && e("div", null, fact.note)));
+/* ── number formatting ─────────────────────────────────────────────────────
+   Presentation only — the underlying Fact values are never altered.        */
+const inr = v => v===null||v===undefined ? "n/a"
+  : "₹" + Math.round(Number(v)).toLocaleString("en-IN");
+const num = v => v===null||v===undefined ? "n/a"
+  : Number(v).toLocaleString("en-IN",{maximumFractionDigits:2});
+const pctRuns = v => v===null||v===undefined ? "n/a"
+  : `${Math.round(Number(v)*100)} out of 100 runs`;
+const fv = f => (f && typeof f==="object") ? f.value : f;
+
+/* ── icons: one 16px stroke set, inline (no external icon font) ───────── */
+const I = (d,size=16,extra={}) => e("svg",{width:size,height:size,viewBox:"0 0 24 24",
+  fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",
+  strokeLinejoin:"round","aria-hidden":"true",...extra}, d.map((p,i)=>e("path",{key:i,d:p})));
+const ico = {
+  check:  ()=>I(["M20 6 9 17l-5-5"]),
+  alert:  ()=>I(["M12 9v4","M12 17h.01","M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"]),
+  ban:    ()=>I(["M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z","m4.9 4.9 14.2 14.2"]),
+  edit:   ()=>I(["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7","M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"]),
+  pin:    ()=>I(["M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z","M12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"]),
+  coins:  ()=>I(["M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3Z","M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6","M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"]),
+  wave:   ()=>I(["M2 12h3l3 8 4-16 3 8h7"]),
+  shield: ()=>I(["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"]),
+  layers: ()=>I(["m12 2 9 5-9 5-9-5 9-5Z","m3 12 9 5 9-5","m3 17 9 5 9-5"]),
+  doc:    ()=>I(["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z","M14 2v6h6","M9 13h6","M9 17h4"]),
+  mic:    ()=>I(["M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z","M19 10v2a7 7 0 0 1-14 0v-2","M12 19v3"]),
+  stopsq: ()=>I(["M6 6h12v12H6z"]),
+  vol:    ()=>I(["M11 5 6 9H2v6h4l5 4V5Z","M15.5 8.5a5 5 0 0 1 0 7","M19 5a9 9 0 0 1 0 14"]),
+  info:   ()=>I(["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z","M12 16v-4","M12 8h.01"]),
+  arrow:  ()=>I(["M5 12h14","m12 5 7 7-7 7"]),
+};
+const sevIcon = s => s==="high" ? ico.alert() : s==="medium" ? ico.info()
+  : I(["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z"]);
+
+const VERDICT = {
+  PROCEED:{label:"Proceed",icon:ico.check,
+    sub:"The cash flow supports this plan at the recommended amount."},
+  PROCEED_WITH_CHANGES:{label:"Proceed with changes",icon:ico.alert,
+    sub:"This can work, but not at the size you asked for."},
+  RECONSIDER:{label:"Reconsider",icon:ico.ban,
+    sub:"We advise against this plan in this village."},
+};
+
+/* ── tappable number + anchored provenance popover ───────────────────── */
+function Num({fact,fmt,openKey,setOpenKey,id}){
+  if(!fact||typeof fact!=="object") return e("span",{className:"num"},(fmt||num)(fact));
+  const open = openKey===id;
+  return e("span",{className:"provwrap"},
+    e("span",{className:"num"+(open?" open":""),role:"button",tabIndex:0,
+      title:"Show source",
+      onClick:()=>setOpenKey(open?null:id),
+      onKeyDown:ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();setOpenKey(open?null:id);}}},
+      (fmt||num)(fact.value)),
+    open && e("div",{className:"prov"},
+      e("div",{className:"psrc"},fact.source||"no source recorded"),
+      e("div",{className:"pmeta"},
+        fact.year && e("span",{className:"chip"},"year ",e("b",null,fact.year)),
+        e("span",{className:"chip"},fact.geo_level," level"),
+        e("span",{className:"chip conf-"+fact.confidence},"confidence ",e("b",null,fact.confidence)),
+        fact.unit && e("span",{className:"chip"},fact.unit)),
+      fact.note && e("div",{className:"pnote"},fact.note)));
 }
 
-function Row({label, fact, prefix}) {
-  return e("tr", null,
-    e("td", {className:"k"}, label),
-    e("td", {className:"v"}, e(Num, {fact, prefix})));
+/* ── narration: same words, given structure ──────────────────────────── */
+function emph(text,k){
+  // Wrap numeric/currency tokens for emphasis. Text content is unchanged.
+  const parts = String(text).split(/(\d[\d,]*(?:\.\d+)?)/g);
+  return parts.map((p,i)=> /^\d/.test(p) ? e("em",{key:k+"-"+i},p) : p);
+}
+function Narration({text}){
+  const [more,setMore] = React.useState(false);
+  if(!text) return null;
+  const sents = text.match(/[^.!?]+[.!?]+(\s|$)/g) || [text];
+  const lead = (sents[0]||"").trim();
+  const rest = sents.slice(1).map(s=>s.trim()).filter(Boolean);
+  const paras=[]; for(let i=0;i<rest.length;i+=3) paras.push(rest.slice(i,i+3).join(" "));
+  const shown = more ? paras : paras.slice(0,1);
+  return e("div",null,
+    e("p",{className:"narr-lead"},lead),
+    shown.map((p,i)=>e("p",{className:"narr-p",key:i},emph(p,i))),
+    paras.length>1 && e("button",{className:"narr-more",onClick:()=>setMore(!more)},
+      more?"Show less":`Read the full assessment (${paras.length-1} more)`));
 }
 
-/* ---------------------------- the map ---------------------------- */
-function CatchmentMap({env}) {
-  const ref = React.useRef(null), mapRef = React.useRef(null);
-  React.useEffect(() => {
-    if (mapRef.current) return;
+/* ── map ─────────────────────────────────────────────────────────────── */
+function CatchmentMap({env,busy}){
+  const ref=React.useRef(null), mapRef=React.useRef(null), markers=React.useRef([]);
+  React.useEffect(()=>{
+    if(mapRef.current) return;
+    const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme:dark)").matches;
+    // Muted basemap so our own layers are the only saturated things on screen.
+    // Desaturation is applied as raster paint properties rather than a CSS
+    // filter: a CSS filter sits on the whole canvas and would wash out the
+    // village, ring and buyer layers along with the tiles. Keyless OSM tiles —
+    // CARTO's basemaps now require an API key.
     mapRef.current = new maplibregl.Map({
-      container: ref.current,
-      style: {
-        version: 8,
-        sources: {osm: {type:"raster",
-          tiles:["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-          tileSize:256, attribution:"© OpenStreetMap"}},
-        layers: [{id:"osm", type:"raster", source:"osm"}]
-      },
-      center:[74.38,19.58], zoom:9});
-    mapRef.current.addControl(new maplibregl.NavigationControl());
-    window.__map = mapRef.current;   // exposed for the UI checks
-  }, []);
+      container:ref.current,
+      style:{version:8,sources:{base:{type:"raster",
+        tiles:["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+               "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+               "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize:256,attribution:'© OpenStreetMap contributors'}},
+        layers:[{id:"base",type:"raster",source:"base",paint:dark?{
+          "raster-saturation":-0.9,"raster-brightness-min":0.03,
+          "raster-brightness-max":0.42,"raster-contrast":-0.12,"raster-opacity":0.85
+        }:{
+          "raster-saturation":-0.88,"raster-brightness-min":0.22,
+          "raster-brightness-max":1,"raster-contrast":-0.2,"raster-opacity":0.72
+        }}]},
+      center:[74.38,19.58],zoom:9,attributionControl:{compact:true}});
+    mapRef.current.addControl(new maplibregl.NavigationControl({showCompass:false}),"top-right");
+    window.__map = mapRef.current;
+  },[]);
 
-  React.useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !env || !env.geo) return;
-    const draw = () => {
-      ["ring-f","ring-l","vil-f","vil-l","pts","pts-lbl"].forEach(id=>{
-        if (map.getLayer(id)) map.removeLayer(id);});
-      ["ring","vil","pts"].forEach(id=>{ if (map.getSource(id)) map.removeSource(id);});
+  React.useEffect(()=>{
+    const map=mapRef.current; if(!map||!env||!env.geo) return;
+    const draw=()=>{
+      ["ring-f","ring-l","vil-f","vil-l","pts-halo","pts"].forEach(id=>{
+        if(map.getLayer(id)) map.removeLayer(id);});
+      ["ring","vil","pts"].forEach(id=>{if(map.getSource(id)) map.removeSource(id);});
+      markers.current.forEach(m=>m.remove()); markers.current=[];
 
-      const ring = JSON.parse(env.geo.ring_geojson);
-      const vil  = JSON.parse(env.geo.village_geojson);
+      const ring=JSON.parse(env.geo.ring_geojson), vil=JSON.parse(env.geo.village_geojson);
+      const buyer = env.geo.points_role==="procurement_capacity";
+      const accent = buyer ? "#b0741a" : "#c04430";
+
       map.addSource("ring",{type:"geojson",data:{type:"Feature",geometry:ring}});
       map.addLayer({id:"ring-f",type:"fill",source:"ring",
-        paint:{"fill-color":"#2b5f8f","fill-opacity":0.08}});
+        paint:{"fill-color":"#1d5f8a","fill-opacity":0.055}});
       map.addLayer({id:"ring-l",type:"line",source:"ring",
-        paint:{"line-color":"#2b5f8f","line-width":2,"line-dasharray":[3,2]}});
+        paint:{"line-color":"#1d5f8a","line-width":2,"line-opacity":.75,"line-dasharray":[2.5,2]}});
 
       map.addSource("vil",{type:"geojson",data:{type:"Feature",geometry:vil}});
       map.addLayer({id:"vil-f",type:"fill",source:"vil",
-        paint:{"fill-color":"#1f7a4d","fill-opacity":0.28}});
+        paint:{"fill-color":"#1c6b45","fill-opacity":0.2}});
       map.addLayer({id:"vil-l",type:"line",source:"vil",
-        paint:{"line-color":"#1f7a4d","line-width":2.5}});
+        paint:{"line-color":"#14543e","line-width":2.6,"line-opacity":.95}});
 
-      const pts = (env.geo.points||[]).map(p=>({type:"Feature",
+      const pts=(env.geo.points||[]).map(p=>({type:"Feature",
         geometry:{type:"Point",coordinates:[p.lon,p.lat]},
-        properties:{name:p.place_name, emp:p.employment, d:p.dist_km}}));
+        properties:{name:p.place_name,emp:p.employment,d:p.dist_km}}));
       map.addSource("pts",{type:"geojson",data:{type:"FeatureCollection",features:pts}});
-      const buyer = env.geo.points_role === "procurement_capacity";
+      map.addLayer({id:"pts-halo",type:"circle",source:"pts",
+        paint:{"circle-radius":["interpolate",["linear"],["get","emp"],0,10,300,26],
+               "circle-color":accent,"circle-opacity":.14}});
       map.addLayer({id:"pts",type:"circle",source:"pts",
-        paint:{"circle-radius":["interpolate",["linear"],["get","emp"],0,5,300,18],
-               "circle-color": buyer ? "#a8620a" : "#a52a2a",
-               "circle-opacity":0.82,"circle-stroke-width":1.5,
-               "circle-stroke-color":"#fff"}});
+        paint:{"circle-radius":["interpolate",["linear"],["get","emp"],0,5.5,300,15],
+               "circle-color":accent,"circle-opacity":.95,
+               "circle-stroke-width":2,"circle-stroke-color":"#fff"}});
 
       map.on("click","pts",ev=>{
-        const p = ev.features[0].properties;
-        new maplibregl.Popup().setLngLat(ev.lngLat)
-          .setHTML(`<b>${p.name}</b><br>${p.emp} employed<br>${p.d} km away`)
+        const p=ev.features[0].properties;
+        new maplibregl.Popup({offset:14,closeButton:false}).setLngLat(ev.lngLat)
+          .setHTML(`<b>${p.name}</b><div class="pp">${p.emp} employed · ${p.d} km away</div>`)
           .addTo(map);});
       map.on("mouseenter","pts",()=>map.getCanvas().style.cursor="pointer");
       map.on("mouseleave","pts",()=>map.getCanvas().style.cursor="");
 
-      const c = ring.coordinates[0];
-      const b = c.reduce((a,x)=>[[Math.min(a[0][0],x[0]),Math.min(a[0][1],x[1])],
-                                 [Math.max(a[1][0],x[0]),Math.max(a[1][1],x[1])]],
-                         [[180,90],[-180,-90]]);
-      map.fitBounds(b,{padding:44,duration:600});
-    };
-    map.isStyleLoaded() ? draw() : map.once("load", draw);
-  }, [env]);
+      // "8 km" label pinned to the ring edge, not buried in the legend.
+      const c=ring.coordinates[0];
+      let north=c[0]; c.forEach(p=>{if(p[1]>north[1]) north=p;});
+      const el=document.createElement("div");
+      el.className="ringlab"; el.textContent=`${env.geo.catchment_km} km catchment`;
+      markers.current.push(new maplibregl.Marker({element:el,anchor:"top",offset:[0,6]})
+        .setLngLat(north).addTo(map));
 
-  const buyer = env && env.geo && env.geo.points_role === "procurement_capacity";
-  return e("div",{style:{position:"relative",height:"100%"}},
+      const b=c.reduce((a,x)=>[[Math.min(a[0][0],x[0]),Math.min(a[0][1],x[1])],
+        [Math.max(a[1][0],x[0]),Math.max(a[1][1],x[1])]],[[180,90],[-180,-90]]);
+      map.fitBounds(b,{padding:{top:86,bottom:56,left:44,right:44},duration:850});
+    };
+    map.isStyleLoaded()?draw():map.once("load",draw);
+  },[env]);
+
+  const g = env && env.geo;
+  const buyer = g && g.points_role==="procurement_capacity";
+  const n = g ? (g.points||[]).length : 0;
+  return e("div",{className:"mapwrap"},
     e("div",{id:"map",ref}),
-    env && env.geo && e("div",{className:"legend"},
-      e("div",null,e("span",{className:"sw",style:{background:"#1f7a4d",opacity:.6}}),"your village"),
-      e("div",null,e("span",{className:"sw",style:{background:"#2b5f8f",opacity:.3}}),
-        `${env.geo.catchment_km} km catchment`),
-      e("div",null,e("span",{className:"sw",style:{background:buyer?"#a8620a":"#a52a2a",
-        borderRadius:"99px"}}), buyer ? "buyers (milk plants)" : "competitors")));
+    busy && e("div",{className:"maploading"}),
+    g && buyer && n===0 && e("div",{className:"mapnote"},
+      ico.ban()," No milk buyer within ",g.catchment_km," km"),
+    g && e("div",{className:"legend"},
+      e("div",{className:"lrow"},
+        e("span",{className:"lk",style:{background:"#1c6b45",opacity:.55,
+          border:"1.5px solid #14543e"}}),
+        e("span",{className:"lt"},"Your village")),
+      e("div",{className:"lrow"},
+        e("span",{className:"lk",style:{background:"#1d5f8a",opacity:.16,
+          border:"1.5px dashed #1d5f8a"}}),
+        e("span",{className:"lt"},g.catchment_km," km catchment")),
+      e("div",{className:"lrow"},
+        e("span",{className:"lk dot",style:{background:buyer?"#b0741a":"#c04430",
+          border:"2px solid #fff",boxShadow:"0 0 0 1px "+(buyer?"#b0741a":"#c04430")}}),
+        e("span",{className:"lt"},buyer?"Milk buyers":"Competitors"),
+        n>0 ? e("span",{className:"lv"},n)
+            : e("span",{className:"lnone"},"none"))));
 }
 
-/* ---------------------------- the app ---------------------------- */
-function App() {
-  const [village,setVillage] = React.useState("nimgaon jali");
-  const [capital,setCapital] = React.useState(100000);
-  const [sector,setSector]   = React.useState("dairy_buffalo");
-  const [sectors,setSectors] = React.useState([]);
-  const [lang,setLang]       = React.useState("en");
-  const [override,setOverride] = React.useState(false);
-  const [env,setEnv]   = React.useState(null);
-  const [rec,setRec]     = React.useState(false);
-  const [heard,setHeard] = React.useState(null);
-  const [voiceErr,setVoiceErr] = React.useState(null);
-  const [speaking,setSpeaking] = React.useState(false);
-  const recRef = React.useRef(null);
-  const [busy,setBusy] = React.useState(false);
-  const [err,setErr]   = React.useState(null);
-  const [cands,setCands] = React.useState(null);
+/* ── skeleton while computing: nothing stale, nothing asserted ────────── */
+const Skeleton = () => e(React.Fragment,null,
+  e("div",{className:"sk-hero"},
+    e("div",{className:"skel sk-chip"}),
+    e("div",{className:"skel sk-title"}),
+    e("div",{className:"skel sk-line",style:{width:"84%"}}),
+    e("div",{className:"skel sk-line",style:{width:"56%"}})),
+  e("div",{className:"sec"},
+    e("div",{className:"secb",style:{display:"flex",flexDirection:"column",gap:9}},
+      [82,96,70,90,64].map((w,i)=>e("div",{className:"skel sk-row",key:i,style:{width:w+"%"}})))));
+
+/* ── app ─────────────────────────────────────────────────────────────── */
+function App(){
+  const [village,setVillage]=React.useState("nimgaon jali");
+  const [capital,setCapital]=React.useState(100000);
+  const [sector,setSector]=React.useState("dairy_buffalo");
+  const [sectors,setSectors]=React.useState([]);
+  const [lang,setLang]=React.useState("en");
+  const [env,setEnv]=React.useState(null);
+  const [busy,setBusy]=React.useState(false);
+  const [err,setErr]=React.useState(null);
+  const [cands,setCands]=React.useState(null);
+  const [formOpen,setFormOpen]=React.useState(true);
+  const [openKey,setOpenKey]=React.useState(null);
+  const [rec,setRec]=React.useState(false);
+  const [heard,setHeard]=React.useState(null);
+  const [voiceErr,setVoiceErr]=React.useState(null);
+  const [speaking,setSpeaking]=React.useState(false);
+  const recRef=React.useRef(null);
 
   React.useEffect(()=>{fetch(API+"/sectors").then(r=>r.json())
     .then(d=>setSectors(d.sectors)).catch(()=>{});},[]);
 
-  const run = async (opts={}) => {
-    setBusy(true); setErr(null); setCands(null);
-    try {
-      const body = {village, capital_inr:Number(capital), sector,
-                    lang, override:opts.override ?? override,
-                    shrid: opts.shrid ?? null, use_llm:false};
-      const r = await fetch(API+"/advise",{method:"POST",
-        headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.detail || "request failed");
-      if (d.resolution && d.resolution.needs_confirmation) {
-        setCands(d.resolution); setEnv(null);
-      } else { setEnv(d); }
-    } catch(ex){ setErr(String(ex.message||ex)); }
+  const run=async(opts={})=>{
+    // FINDING #1: clear result state BEFORE the request, so a previous
+    // village's verdict and figures can never sit beside a new village's name.
+    setEnv(null); setCands(null); setErr(null); setOpenKey(null);
+    setBusy(true);
+    try{
+      const body={village,capital_inr:Number(capital),sector,lang,
+        override:opts.override??false,shrid:opts.shrid??null,use_llm:false};
+      const r=await fetch(API+"/advise",{method:"POST",
+        headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      const d=await r.json();
+      if(!r.ok) throw new Error(d.detail||"request failed");
+      if(d.resolution && d.resolution.needs_confirmation){ setCands(d.resolution); }
+      else { setEnv(d); setFormOpen(false); }
+    }catch(ex){ setErr(String(ex.message||ex)); }
     setBusy(false);
   };
-  React.useEffect(()=>{run();},[]);   // eslint-disable-line
+  React.useEffect(()=>{run();},[]); // eslint-disable-line
 
-  /* ---- voice: additive. Any failure leaves the text form working ---- */
-  const startRec = async () => {
+  const startRec=async()=>{
     setVoiceErr(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-      const mr = new MediaRecorder(stream);
-      const chunks = [];
-      mr.ondataavailable = ev => chunks.push(ev.data);
-      mr.onstop = async () => {
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+      const mr=new MediaRecorder(stream); const chunks=[];
+      mr.ondataavailable=ev=>chunks.push(ev.data);
+      mr.onstop=async()=>{
         stream.getTracks().forEach(t=>t.stop());
-        const blob = new Blob(chunks,{type:mr.mimeType||"audio/webm"});
-        const fd = new FormData();
-        fd.append("audio", blob, "q.webm");
-        fd.append("lang", lang);
-        try {
-          const r = await fetch(API+"/voice/transcribe",{method:"POST",body:fd});
-          const d = await r.json();
-          if (!d.ok) { setVoiceErr(d.error||"transcription failed"); return; }
-          setHeard(d);
-          // Fill the form but DO NOT run — the user confirms first.
-          if (d.parsed.village) setVillage(d.parsed.village);
-          if (d.parsed.capital_inr) setCapital(d.parsed.capital_inr);
-          if (d.parsed.sector) setSector(d.parsed.sector);
-        } catch(ex){ setVoiceErr(String(ex.message||ex)); }
+        const fd=new FormData();
+        fd.append("audio",new Blob(chunks,{type:mr.mimeType||"audio/webm"}),"q.webm");
+        fd.append("lang",lang);
+        try{
+          const r=await fetch(API+"/voice/transcribe",{method:"POST",body:fd});
+          const d=await r.json();
+          if(!d.ok){setVoiceErr(d.error||"Could not transcribe that. Type it instead.");return;}
+          setHeard(d); setFormOpen(true);
+          if(d.parsed.village) setVillage(d.parsed.village);
+          if(d.parsed.capital_inr) setCapital(d.parsed.capital_inr);
+          if(d.parsed.sector) setSector(d.parsed.sector);
+        }catch(ex){setVoiceErr(String(ex.message||ex));}
       };
-      recRef.current = mr; mr.start(); setRec(true);
-    } catch(ex){
-      setVoiceErr("Microphone unavailable — use the text form. ("+
-                  (ex.message||ex)+")");
-    }
+      recRef.current=mr; mr.start(); setRec(true);
+    }catch(ex){ setVoiceErr("Microphone unavailable — the form below still works."); }
   };
-  const stopRec = () => { if (recRef.current) recRef.current.stop();
-                          setRec(false); };
-
-  const speak = async () => {
-    if (!env || !env.narration) return;
+  const stopRec=()=>{if(recRef.current)recRef.current.stop();setRec(false);};
+  const speak=async()=>{
+    if(!env||!env.narration) return;
     setSpeaking(true); setVoiceErr(null);
-    try {
-      const r = await fetch(API+"/voice/speak",{method:"POST",
+    try{
+      const r=await fetch(API+"/voice/speak",{method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({text:env.narration.text})});
-      if (!r.ok) throw new Error("TTS unavailable");
-      const buf = await r.arrayBuffer();
-      const url = URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));
-      await new Audio(url).play();
-    } catch(ex){ setVoiceErr("Could not play audio — the text above is the "+
-                             "same advice. ("+(ex.message||ex)+")"); }
+      if(!r.ok) throw new Error("audio unavailable");
+      const buf=await r.arrayBuffer();
+      await new Audio(URL.createObjectURL(new Blob([buf],{type:"audio/wav"}))).play();
+    }catch(ex){ setVoiceErr("Could not play audio — the text above is the same advice."); }
     setSpeaking(false);
   };
 
-  const d = env && env.decision, m = env && env.market,
-        f = env && env.finance,  a = env && env.affordability;
+  const d=env&&env.decision, m=env&&env.market, fin=env&&env.finance, aff=env&&env.affordability;
+  const V=d?VERDICT[d.verdict]:null;
+  const sectorName=(sectors.find(s=>s.sector_id===sector)||{}).display_name;
+  const N=(f,fmt,id)=>e(Num,{fact:f,fmt,openKey,setOpenKey,id});
+
+  // proportional bars, drawn to one shared scale
+  let scale=1;
+  if(aff&&fin){ scale=Math.max(fv(fin.eligible_loan)||0, fv(aff.recommended_loan)||0, 1); }
 
   return e(React.Fragment,null,
-    e("header",null,
-      e("h1",null,"उद्यम सारथी · Udyam Saarthi"),
-      e("span",{className:"sub"},
-        "Viability, not eligibility · Ahmadnagar, Maharashtra"),
-      env && e("span",{className:"sub"},"run ",env.run_id)),
-    e("div",{className:"wrap"},
-      e(CatchmentMap,{env}),
+    e("div",{className:"top"},
+      e("span",{className:"brand"},e("span",{className:"dev"},"उद्यम सारथी"),"Udyam Saarthi"),
+      e("span",{className:"tagline"},"Viability, not eligibility"),
+      e("span",{className:"spacer"}),
+      e("span",{className:"ctx"},"Maharashtra · 5 districts")),
+
+    e("div",{className:"shell"},
+      e(CatchmentMap,{env,busy}),
+
       e("div",{className:"panel"},
-        e("div",{className:"voicebar"},
-          e("button",{className:rec?"rec":"ghost",
-                      onClick:rec?stopRec:startRec},
-            rec?"◼ Stop":"🎙 Speak"),
-          env && env.narration && e("button",{className:"ghost",onClick:speak,
-                                              disabled:speaking},
-            speaking?"…":"🔊 Listen")),
-        voiceErr && e("div",{className:"err",style:{fontSize:12,marginBottom:8}},
-          voiceErr),
-        heard && e("div",{className:"heard"},
-          e("b",null,"Heard — confirm before running"),
-          e("div",null,heard.transcript),
-          e("div",{className:"sub",style:{marginTop:4}},
-            "→ ",heard.parsed.village||"?"," · ₹",
-            fmt(heard.parsed.capital_inr)," · ",heard.parsed.sector||"?")),
-        e("div",{className:"form"},
-          e("label",null,"Village"),
-          e("input",{value:village,onChange:ev=>setVillage(ev.target.value)}),
-          e("label",null,"Your capital (₹)"),
-          e("input",{type:"number",value:capital,onChange:ev=>setCapital(ev.target.value)}),
-          e("label",null,"Sector"),
-          e("select",{value:sector,onChange:ev=>setSector(ev.target.value)},
-            sectors.map(s=>e("option",{key:s.sector_id,value:s.sector_id},
-              s.display_name.en))),
-          e("label",null,"Language"),
-          e("select",{value:lang,onChange:ev=>setLang(ev.target.value)},
-            e("option",{value:"en"},"English"),
-            e("option",{value:"mr"},"मराठी")),
-          e("button",{onClick:()=>run(),disabled:busy},
-            busy?"Computing…":"Get advice")),
 
-        err && e("div",{className:"err"},err),
+        /* ── VERDICT HERO — first thing in the panel ── */
+        busy && e(Skeleton),
+        !busy && err && e("div",{className:"err"},err),
+        !busy && !env && !cands && !err && e("div",{className:"sec"},
+          e("div",{className:"empty"},
+            e("div",{className:"ei"},ico.pin(28)),
+            "Ask about a village to see whether the plan holds there.")),
 
-        cands && e("div",null,
-          e("h2",null,"Which one?"),
-          e("div",{style:{fontSize:12.5,marginBottom:8}},cands.message),
-          cands.candidates.slice(0,8).map(c=>
-            e("div",{className:"alt",key:c.shrid2},
-              e("b",null,c.place_name),
-              e("div",{className:"sub"},
-                `${c.subdistrict_name} · pop ${fmt(c.population)} · score ${c.score}`),
-              e("button",{className:"ghost",style:{marginTop:6},
-                onClick:()=>run({shrid:c.shrid2})},"Use this one")))),
+        !busy && env && e("div",{className:"hero verdict "+d.verdict},
+          e("div",{className:"vlabel"},V.icon(15),"Verdict"),
+          e("h1",{className:"vtitle"},d.verdict.replace(/_/g," ")),
+          e("p",{className:"vsub"},V.sub),
+          e("div",{className:"vmeta"},
+            e("span",{className:"chip"},"score ",e("b",null,num(fv(d.score.overall)))),
+            e("span",{className:"chip conf-"+d.confidence},"confidence ",e("b",null,d.confidence)),
+            e("span",{className:"chip"},ico.pin(12)," ",
+              e("b",null,env.resolution.chosen.place_name)," · ",
+              env.resolution.chosen.district_name)),
+          d.override_applied && e("div",{className:"banner"},ico.alert(15),
+            e("div",null,e("b",null,"Override applied. ")," The verdict above is unchanged — ",
+              "what follows is how to make this survivable.")),
+          d.hard_gates_triggered && d.hard_gates_triggered.length>0 &&
+            e("div",{className:"gates"},
+              d.hard_gates_triggered.map((g,i)=>{
+                const t=g.replace(/^Blocking risk flag:\s*/,"");
+                const head=(t.split(".")[0]||t).trim();
+                const body=t.slice(head.length+1).trim();
+                return e("div",{className:"gate",key:i},
+                  e("span",{className:"gi"},ico.ban(16)),
+                  e("div",null,e("div",{className:"gt"},head),
+                    body && e("div",{className:"gd"},body)));
+              }))),
 
-        env && e(React.Fragment,null,
-          e("div",{className:"verdict "+d.verdict},
-            e("div",{className:"vtitle "+d.verdict}, d.verdict.replace(/_/g," ")),
-            e("div",{style:{margin:"7px 0"}},
-              e("span",{className:"chip"},"score ",fmt(d.score.overall.value)),
-              e("span",{className:"chip "+d.confidence},"confidence ",d.confidence)),
-            d.override_applied && e("div",{className:"sub"},
-              "Override applied — verdict unchanged, showing risk mitigation."),
-            e("div",{className:"prose",style:{marginTop:8}},
-              env.narration && env.narration.text)),
+        /* ── QUERY: collapses to a summary once a result exists ── */
+        e("div",{className:"query"},
+          !formOpen && e("button",{className:"qsum",onClick:()=>setFormOpen(true)},
+            e("span",{className:"qi"},ico.edit(15)),
+            e("span",{className:"qtext"},
+              e("b",null,village)," · ",inr(capital)," · ",
+              sectorName?sectorName.en:sector),
+            e("span",{className:"qact"},"Change")),
+          formOpen && e("div",{className:"qform"+(env?"":" solo")},
+            e("div",{className:"voicebar"},
+              e("button",{className:"btn ghost"+(rec?" rec":""),onClick:rec?stopRec:startRec},
+                rec?ico.stopsq(14):ico.mic(14), rec?"Stop":"Speak"),
+              env && env.narration && e("button",{className:"btn ghost",onClick:speak,
+                disabled:speaking}, ico.vol(14), speaking?"Playing…":"Listen")),
+            voiceErr && e("div",{className:"err",style:{fontSize:"var(--t-12)"}},voiceErr),
+            heard && e("div",{className:"banner"},ico.mic(15),
+              e("div",null,e("b",null,"Heard: "),heard.transcript)),
+            e("div",null,e("label",{htmlFor:"f-vil"},"Village"),
+              e("input",{id:"f-vil",value:village,onChange:ev=>setVillage(ev.target.value),
+                onKeyDown:ev=>{if(ev.key==="Enter")run();}})),
+            e("div",{className:"grid2"},
+              e("div",null,e("label",{htmlFor:"f-cap"},"Your capital (₹)"),
+                e("input",{id:"f-cap",type:"number",value:capital,
+                  onChange:ev=>setCapital(ev.target.value)})),
+              e("div",null,e("label",{htmlFor:"f-lang"},"Language"),
+                e("select",{id:"f-lang",value:lang,onChange:ev=>setLang(ev.target.value)},
+                  e("option",{value:"en"},"English"),e("option",{value:"mr"},"मराठी")))),
+            e("div",null,e("label",{htmlFor:"f-sec"},"Sector"),
+              e("select",{id:"f-sec",value:sector,onChange:ev=>setSector(ev.target.value)},
+                sectors.map(s=>e("option",{key:s.sector_id,value:s.sector_id},s.display_name.en)))),
+            e("button",{className:"btn wide",onClick:()=>run(),disabled:busy},
+              busy?e("span",{className:"spin"}):ico.arrow(14), busy?"Computing…":"Get advice"))),
 
-          e("h2",null,"Market"),
-          e("table",null,e("tbody",null,
-            e(Row,{label:`Catchment population (${env.geo.catchment_km} km)`,
-                   fact:m.catchment_population}),
-            e(Row,{label:"Villages in catchment",fact:m.villages_in_catchment}),
-            m.procurement_capacity && e(Row,{label:"Buyer capacity (people employed)",
-                   fact:m.procurement_capacity}),
-            e(Row,{label:"Percentile vs district",fact:m.saturation_percentile}),
-            e(Row,{label:"Night-lights trend",fact:m.growth_signal}))),
+        /* ── disambiguation ── */
+        cands && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.pin(15)),
+            e("h2",null,"Which one?"),
+            e("span",{className:"cnt"},cands.candidates.length," matches")),
+          e("div",{className:"secb"},
+            e("p",{className:"narr-p"},cands.message),
+            cands.candidates.slice(0,8).map(c=>e("div",{className:"alt",key:c.shrid2},
+              e("div",{className:"ah"},e("span",{className:"an"},c.place_name),
+                e("span",{className:"chip"},"score ",e("b",null,c.score))),
+              e("div",{className:"aw"},c.subdistrict_name," · ",c.district_name,
+                " · pop ",num(c.population)),
+              e("button",{className:"btn ghost",style:{marginTop:4,alignSelf:"flex-start"},
+                onClick:()=>run({shrid:c.shrid2})},"Use this one"))))),
 
-          e("h2",null,"Financial roadmap"),
-          e("table",null,e("tbody",null,
-            e(Row,{label:"Eligible loan",fact:f.eligible_loan,prefix:"₹"}),
-            e(Row,{label:"Interest rate",fact:f.interest_rate}),
-            e(Row,{label:"EMI at eligible",fact:f.emi,prefix:"₹"}),
-            e(Row,{label:"Monthly revenue",fact:a.monthly_revenue,prefix:"₹"}),
-            e(Row,{label:"Monthly running cost",fact:a.monthly_opex,prefix:"₹"}),
-            e(Row,{label:"Household needs",fact:a.household_drawings,prefix:"₹"}),
-            e(Row,{label:"Left for EMI",fact:a.net_available_for_emi,prefix:"₹"}),
-            e(Row,{label:"RECOMMENDED loan",fact:a.recommended_loan,prefix:"₹"}),
-            e(Row,{label:"EMI at recommended",fact:a.emi_at_recommended,prefix:"₹"}),
-            e(Row,{label:"Working-capital floor",fact:a.working_capital_floor,prefix:"₹"}),
-            a.milk_price && e(Row,{label:"Milk price used",fact:a.milk_price,prefix:"₹"}),
-            a.yield_per_animal_per_day && e(Row,{label:"Yield assumed",
-                   fact:a.yield_per_animal_per_day}))),
+        /* ── narration ── */
+        !busy && env && env.narration && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.doc(15)),
+            e("h2",null,"The assessment"),
+            e("span",{className:"cnt"},env.narration.path==="llm"?"narrated":"templated")),
+          e("div",{className:"secb"},e(Narration,{text:env.narration.text}))),
 
-          e("h2",null,"Stress test"),
-          e("table",null,e("tbody",null,
-            e(Row,{label:"Survival at recommended",
-                   fact:env.risk.survival_at_recommended}),
-            e(Row,{label:"Survival at eligible",
-                   fact:env.risk.survival_at_eligible}))),
+        /* ── FINANCIAL ROADMAP ── */
+        !busy && env && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.coins(15)),
+            e("h2",null,"Financial roadmap")),
+          e("div",{className:"hero-fig"},
+            e("div",{className:"hl"},"We recommend borrowing"),
+            e("div",{className:"hv"},N(aff.recommended_loan,inr,"rec")),
+            e("div",{className:"hsub"},
+              (fv(aff.recommended_loan) < fv(fin.eligible_loan))
+                ? [ "Eligible for ", e("s",{key:"s"},inr(fv(fin.eligible_loan))),
+                    " — the scheme would lend more than this business can service." ]
+                : "This is the full amount the scheme allows, and the cash flow supports it.")),
+          e("div",{className:"bars"},
+            [["Recommended",fv(aff.recommended_loan),"var(--go-2)"],
+             ["Eligible",fv(fin.eligible_loan),"var(--line-3)"]].map(([l,v,c],i)=>
+              e("div",{className:"bar",key:i},
+                e("span",{className:"bl"},l),
+                e("span",{className:"bt"},e("span",{className:"bf",
+                  style:{width:(100*(v||0)/scale)+"%",background:c}})),
+                e("span",{className:"bv"},inr(v))))),
+          e("div",{className:"flow"},
+            e("div",{className:"frow"},e("span",{className:"op"}," "),
+              e("span",{className:"fl"},"Monthly revenue"),
+              e("span",{className:"fv"},N(aff.monthly_revenue,inr,"rev"))),
+            e("div",{className:"frow"},e("span",{className:"op"},"−"),
+              e("span",{className:"fl"},"Running cost"),
+              e("span",{className:"fv"},N(aff.monthly_opex,inr,"opex"))),
+            e("div",{className:"frow"},e("span",{className:"op"},"−"),
+              e("span",{className:"fl"},"Household needs"),
+              e("span",{className:"fv"},N(aff.household_drawings,inr,"draw"))),
+            e("div",{className:"frow sum"},e("span",{className:"op"},"="),
+              e("span",{className:"fl"},"Left for EMI each month"),
+              e("span",{className:"fv"},N(aff.net_available_for_emi,inr,"net"))),
+            e("div",{className:"frow"},e("span",{className:"op"}," "),
+              e("span",{className:"fl"},"EMI at recommended"),
+              e("span",{className:"fv"},N(aff.emi_at_recommended,inr,"emirec"))),
+            e("div",{className:"frow"},e("span",{className:"op"}," "),
+              e("span",{className:"fl"},"Working-capital floor"),
+              e("span",{className:"fv"},N(aff.working_capital_floor,inr,"wc")))),
+          e("div",{className:"assump"},
+            e("div",{className:"al"},"Assumptions behind these figures"),
+            aff.milk_price && e("div",{className:"arow"},
+              e("span",{className:"fl"},"Milk price"),
+              e("span",{className:"fv"},N(aff.milk_price,v=>"₹"+num(v)+"/L","milk"))),
+            aff.yield_per_animal_per_day && e("div",{className:"arow"},
+              e("span",{className:"fl"},"Yield per animal"),
+              e("span",{className:"fv"},N(aff.yield_per_animal_per_day,
+                v=>num(v)+" L/day","yld"))),
+            aff.opex_per_animal && e("div",{className:"arow"},
+              e("span",{className:"fl"},"Cost per animal"),
+              e("span",{className:"fv"},N(aff.opex_per_animal,v=>inr(v)+"/mo","opa"))),
+            e("div",{className:"arow"},
+              e("span",{className:"fl"},"Interest rate"),
+              e("span",{className:"fv"},N(fin.interest_rate,
+                v=>(Number(v)*100).toFixed(0)+"% a year","rate"))))),
 
-          env.risk.flags.length>0 && e(React.Fragment,null,
+        /* ── market ── */
+        !busy && env && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.layers(15)),
+            e("h2",null,"Market"),
+            e("span",{className:"cnt"},env.geo.catchment_km," km ring")),
+          e("div",{className:"flow",style:{borderTop:0}},
+            e("div",{className:"frow"},e("span",{className:"fl"},"People in the catchment"),
+              e("span",{className:"fv"},N(m.catchment_population,num,"pop"))),
+            e("div",{className:"frow"},e("span",{className:"fl"},"Villages in the catchment"),
+              e("span",{className:"fv"},N(m.villages_in_catchment,num,"nv"))),
+            m.procurement_capacity && e("div",{className:"frow"},
+              e("span",{className:"fl"},"Buyer capacity (people employed)"),
+              e("span",{className:"fv"},N(m.procurement_capacity,num,"buy"))),
+            e("div",{className:"frow"},
+              e("span",{className:"fl"},"Percentile within district"),
+              e("span",{className:"fv"},N(m.saturation_percentile,num,"pct"))))),
+
+        /* ── stress test ── */
+        !busy && env && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.shield(15)),
+            e("h2",null,"Stress test"),e("span",{className:"cnt"},"1,000 simulated runs")),
+          e("div",{className:"flow",style:{borderTop:0}},
+            e("div",{className:"frow"},e("span",{className:"fl"},"Survives at recommended"),
+              e("span",{className:"fv"},N(env.risk.survival_at_recommended,pctRuns,"srec"))),
+            e("div",{className:"frow"},e("span",{className:"fl"},"Survives at eligible"),
+              e("span",{className:"fv"},N(env.risk.survival_at_eligible,pctRuns,"self"))))),
+
+        /* ── risks ── */
+        !busy && env && env.risk.flags.length>0 && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.alert(15)),
             e("h2",null,"Risks found"),
-            env.risk.flags.map((fl,i)=>e("div",{className:"flag",key:i},
-              e("span",{className:"sev "+fl.severity},fl.severity),
-              fl.message,
-              fl.evidence && e("div",{style:{marginTop:4}},
-                e(Num,{fact:fl.evidence}))))),
+            e("span",{className:"cnt"},env.risk.flags.length)),
+          e("div",{className:"secb"},
+            env.risk.flags.map((f,i)=>e("div",{className:"flag "+f.severity,key:i},
+              e("span",{className:"fi"},sevIcon(f.severity)),
+              e("div",null,
+                e("span",{className:"fc"},f.severity," · ",f.code.replace(/_/g," ").toLowerCase()),
+                e("span",{className:"fm"},f.message),
+                f.evidence && f.evidence.value!==null && e("div",{style:{marginTop:4}},
+                  N(f.evidence,num,"ev"+i))))))),
 
-          e("h2",null,"Why"),
-          e("ul",null,d.reasons.slice(0,6).map((r,i)=>e("li",{key:i},r))),
+        /* ── why ── */
+        !busy && env && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.info(15)),
+            e("h2",null,"Why this verdict")),
+          e("div",{className:"secb"},
+            e("ul",{className:"plain"},d.reasons.slice(0,6).map((r,i)=>e("li",{key:i},r))))),
 
-          d.alternatives.length>0 && e(React.Fragment,null,
-            e("h2",null,"Better options for this village"),
+        /* ── alternatives ── */
+        !busy && env && d.alternatives.length>0 && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.layers(15)),
+            e("h2",null,"Better options here"),
+            e("span",{className:"cnt"},d.alternatives.length," ranked")),
+          e("div",{className:"secb"},
             d.alternatives.map((alt,i)=>e("div",{className:"alt",key:i},
-              e("b",null,alt.display_name),
-              e("div",null,e(Num,{fact:alt.score})," score · recommended ",
-                e(Num,{fact:alt.recommended_loan,prefix:"₹"})),
-              e("div",{className:"sub"},alt.why)))),
+              e("div",{className:"ah"},e("span",{className:"an"},alt.display_name),
+                e("span",{className:"bv",style:{fontFamily:"var(--f-num)",
+                  fontSize:"var(--t-11)",color:"var(--ink-3)"}},
+                  num(fv(alt.score)))),
+              e("span",{className:"sbar"},e("span",{className:"sfill",
+                style:{width:(100*Number(fv(alt.score)||0))+"%"}})),
+              e("div",{className:"aw"},"Supports ",inr(fv(alt.recommended_loan)),
+                " · survives ",pctRuns(fv(alt.survival_probability))),
+              alt.plp && alt.plp.citations && alt.plp.citations.length>0 &&
+                e("div",{className:"cite"},ico.doc(12),
+                  "NABARD PLP ",alt.plp.citations[0].section.split(" ")[0],
+                  " · p.",alt.plp.citations[0].page))))),
 
-          d.mitigations && e(React.Fragment,null,
-            e("h2",null,"Risk mitigation"),
-            e("ul",null,d.mitigations.map((x,i)=>e("li",{key:i},x)))),
+        /* ── mitigations ── */
+        !busy && env && d.mitigations && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.shield(15)),
+            e("h2",null,"Risk mitigation")),
+          e("div",{className:"secb"},
+            e("ul",{className:"plain"},d.mitigations.map((x,i)=>e("li",{key:i},x))))),
 
-          d.verdict!=="PROCEED" && !d.override_applied &&
-            e("button",{className:"ghost",style:{marginTop:12,width:"100%"},
-              onClick:()=>{setOverride(true);run({override:true});}},
-              "I still want to do this →"),
+        /* ── override ── */
+        !busy && env && d.verdict!=="PROCEED" && !d.override_applied &&
+          e("button",{className:"btn stop wide",onClick:()=>run({override:true})},
+            "I still want to do this",ico.arrow(14)),
 
-          e("h2",null,"Provenance"),
-          e("div",{className:"sub"},
-            env.provenance.length," facts · every number above is tappable · ",
-            e("a",{href:API+"/provenance/"+env.run_id,target:"_blank"},"raw JSON"))))));
+        /* ── provenance ── */
+        !busy && env && e("div",{className:"sec"},
+          e("div",{className:"sech"},e("span",{className:"si"},ico.doc(15)),
+            e("h2",null,"Provenance"),
+            e("span",{className:"cnt"},env.provenance.length," facts")),
+          e("div",{className:"secb"},
+            e("p",{className:"narr-p"},
+              "Every figure above is tappable and opens its source, year, ",
+              "geographic level and confidence."),
+            e("div",{className:"cite",style:{marginTop:6}},
+              "run ",env.run_id," · ",
+              e("a",{href:API+"/provenance/"+env.run_id,target:"_blank",
+                rel:"noreferrer",style:{color:"var(--acc)"}},"raw JSON")))))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(e(App));
 </script>

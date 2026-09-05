@@ -29,6 +29,11 @@ def run_case(page, village, capital, expect_verdict, tag):
     page.goto(BASE, wait_until="load")
     page.wait_for_selector("#map", timeout=30000)
     page.wait_for_selector(".verdict", timeout=90000)   # initial auto-run
+    # The query form collapses to a summary row once a result exists, so it has
+    # to be reopened before the inputs are reachable.
+    if not page.query_selector_all("input"):
+        page.click(".qsum")
+        page.wait_for_selector("input", timeout=10000)
     inputs = page.query_selector_all("input")
     inputs[0].fill(village)
     page.fill("input[type=number]", str(capital))
@@ -122,6 +127,7 @@ def main() -> int:
         btn = page.query_selector("button:has-text('I still want')")
         check(btn is not None, "override button offered on RECONSIDER")
         if btn:
+            btn.scroll_into_view_if_needed()
             btn.click()
             page.wait_for_function(
                 "() => document.body.innerText.includes('Override applied')",
