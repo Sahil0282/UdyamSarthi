@@ -1,7 +1,8 @@
 # UI/UX Audit — Udyam Saarthi
 
-Analysis pass only. No code changed. Screenshots of all 15 reachable states in
-`/tmp/audit/`.
+Analysis pass only when written. **All three passes have since been executed** —
+see the status note at the end of each finding. Screenshots of all 15 original
+states in `/tmp/audit/`, with after-shots alongside them.
 
 ---
 
@@ -360,3 +361,35 @@ One caveat on scope: passes 1 and 2 touch `web/index.html` only. Nothing above
 requires changing an engine, an API response or a Fact — the data the UI needs is
 already in the envelope, including the buyer count, the severity levels, the hard
 gates and the full provenance. This is a presentation-layer job throughout.
+
+---
+
+## Execution record
+
+**Pass 1 and Pass 2 — done.** Findings 1, 2, 3, 6, 4, 7, 5, 12 all implemented.
+Three bugs surfaced while building that the audit had not predicted: bar fills
+rendered at 0px because a `<span>` in a non-flex parent stays `display:inline`;
+panel sections were squeezed because flex children shrink by default; and CARTO's
+basemap now demands an API key, so the muting is done with raster paint
+properties on keyless OSM tiles instead.
+
+**Pass 3 — done, with a correction to this document's own estimate.** Four of the
+six items in Pass 3 had already been delivered in Pass 2 as a side effect of
+building the token and icon system:
+
+| Finding | Expected in Pass 3 | Actually found |
+|---|---|---|
+| 10 · iconography | replace emoji, build an icon set | already done — 0 emoji, 15 inline SVG icons. Only the severity *shapes* needed sharpening |
+| 9 · motion | build the motion set | already done — 6 transitions, 4 keyframes, reduced-motion block |
+| 14 · header | demote the run id | already done — run id was already out of the masthead. Only a copy affordance was missing |
+| 13 · dark mode | add it | already done — 30 tokens redefined under `prefers-color-scheme` |
+
+Only **8** (the popover) and **11** (mobile) were real work. That is a
+mis-estimate in the original prioritisation, not extra scope discovered: Pass 2's
+token work carried more of Pass 3 than this document anticipated.
+
+One further bug caught by looking at a screenshot rather than by an assertion:
+the anchored popover was clipped by `.sec { overflow: hidden }`. The
+layout-shift test passed — there genuinely was no shift — while the chips and
+the note were cut off and unreadable. An explicit clipping assertion now guards
+it.
